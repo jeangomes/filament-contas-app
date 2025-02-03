@@ -18,24 +18,27 @@ class CreditCardBillResource extends Resource
     protected static ?string $model = CreditCardBill::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $modelLabel = 'Fatura de cartão/Conta';
+    protected static ?string $pluralModelLabel = 'Faturas de cartão/Contas';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('title_description_owner')
+                Forms\Components\TextInput::make('title_description_owner')->label('Descrição/Dono da fatura')
                     ->required()
                     ->maxLength(255),
-                Forms\Components\TextInput::make('reference_date')
+                Forms\Components\TextInput::make('reference_date')->label('Data de referencia')
                     ->required()
                     ->maxLength(255),
-                Forms\Components\TextInput::make('amount')
+                Forms\Components\TextInput::make('amount')->label('Valor')
                     ->numeric()
                     ->inputMode('decimal')
                     ->required(),
-                Forms\Components\DatePicker::make('due_date')
+                Forms\Components\DatePicker::make('due_date')->label('Data de vencimento')
                     ->required(),
-                Forms\Components\Textarea::make('content_transaction')
+                Forms\Components\Textarea::make('content_transaction')->label('Transações')
+                    ->visibleOn('create')
                     ->required()
                     ->rows(10)
                     ->cols(20),
@@ -44,7 +47,7 @@ class CreditCardBillResource extends Resource
                         'cat' => 'Cat',
                         'dog' => 'Dog',
                         'rabbit' => 'Rabbit',
-                    ])->disabled(),
+                    ])->disabled()->hidden(),
 
             ]);
     }
@@ -53,11 +56,39 @@ class CreditCardBillResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('title_description_owner'),
-                Tables\Columns\TextColumn::make('reference_date'),
-                Tables\Columns\TextColumn::make('observation'),
-                Tables\Columns\TextColumn::make('amount'),
-                Tables\Columns\TextColumn::make('due_date'),
+                Tables\Columns\TextColumn::make('title_description_owner')->label('Fatura'),
+                Tables\Columns\TextColumn::make('reference_date')
+                    ->label('Data de referência')
+                    ->html()
+                    ->state(function (CreditCardBill $record) {
+                        $yearBill = $record->due_date->format('Y');
+                        $monthBill = $record->due_date->getTranslatedMonthName();
+                        $sub = $record->due_date->subMonth();
+                        $previousMonthName = $sub->getTranslatedMonthName();
+                        $yearExpenses = $sub->format('Y');
+                        return "Referente a {$previousMonthName}/{$yearExpenses} <br> Pgto {$monthBill}/{$yearBill}";
+                    }),
+                Tables\Columns\TextColumn::make('due_date_format1')
+                    ->label('Mês/Ano Ref')
+                    ->state(function (CreditCardBill $record) {
+                        $sub = $record->due_date->subMonth();
+                        return $sub;
+                    })
+                    ->dateTime('m/Y'),
+                    //->timezone('America/Sao_Paulo'),
+                Tables\Columns\TextColumn::make('due_date_format2')
+                    ->label('Mês/Ano Vcto')
+                    ->state(function (CreditCardBill $record) {
+                        return $record->due_date->format('m/Y');
+                    }),
+                    //->timezone('America/Sao_Paulo'),
+                Tables\Columns\TextColumn::make('due_date')
+                    ->label('Vencimento')
+                    ->dateTime('d/m/Y'),
+                    //->timezone('America/Sao_Paulo'),
+                //Tables\Columns\TextColumn::make('observation'),
+                Tables\Columns\TextColumn::make('amount')->money('BRL')->label('Valor'),
+                Tables\Columns\TextColumn::make('transactions_count')->counts('transactions')->label('Transações')
             ])
             ->filters([
                 //
@@ -75,7 +106,7 @@ class CreditCardBillResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\TransactionsRelationManager::class,
         ];
     }
 

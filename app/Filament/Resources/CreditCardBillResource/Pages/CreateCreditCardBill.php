@@ -3,7 +3,8 @@
 namespace App\Filament\Resources\CreditCardBillResource\Pages;
 
 use App\Filament\Resources\CreditCardBillResource;
-use App\Models\Transaction;
+use App\Models\CreditCardBill;
+//use App\Models\Transaction;
 use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 
@@ -46,9 +47,11 @@ class CreateCreditCardBill extends CreateRecord
 
     protected function afterCreate(): void
     {
+        /** @var CreditCardBill $bill */
+        $bill = $this->record;
         $resultado = $this->processarDespesas($this->data['content_transaction']);
         foreach ($resultado as $item) {
-            Transaction::create($item);
+            $bill->transactions()->create($item);
             //$this->record->transactions()->saveMany();
             //dump($item);
         }

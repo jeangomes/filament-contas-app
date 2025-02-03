@@ -14,6 +14,14 @@ class Transaction extends Model
         'amount',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'amount' => 'float',
+            //'transaction_date' => 'date',
+        ];
+    }
+
     public function creditCardBill(): BelongsTo
     {
         return $this->belongsTo(CreditCardBill::class);

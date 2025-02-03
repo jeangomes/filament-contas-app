@@ -14,6 +14,15 @@ class CreditCardBill extends Model
         'due_date',
         'amount',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'amount' => 'float',
+            'due_date' => 'date:Y-m-d',
+        ];
+    }
+
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);

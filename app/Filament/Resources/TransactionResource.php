@@ -18,6 +18,8 @@ class TransactionResource extends Resource
     protected static ?string $model = Transaction::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $modelLabel = 'Transação/Gasto';
+    protected static ?string $pluralModelLabel = 'Transações/Gastos';
 
     public static function form(Form $form): Form
     {
@@ -31,9 +33,13 @@ class TransactionResource extends Resource
     {
         return $table->paginated(false)
             ->columns([
+                Tables\Columns\TextColumn::make('creditCardBill.reference_date'),
                 Tables\Columns\TextColumn::make('transaction_date'),
                 Tables\Columns\TextColumn::make('description'),
-                Tables\Columns\TextColumn::make('amount'),
+                Tables\Columns\TextColumn::make('parcelas'),
+                Tables\Columns\TextColumn::make('amount')->money('BRL'),
+                Tables\Columns\ToggleColumn::make('common_expense'),
+                Tables\Columns\ToggleColumn::make('individual_expense'),
             ])
             ->filters([
                 //
