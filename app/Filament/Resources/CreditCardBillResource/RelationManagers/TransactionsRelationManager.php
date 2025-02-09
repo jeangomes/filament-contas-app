@@ -7,6 +7,7 @@ namespace App\Filament\Resources\CreditCardBillResource\RelationManagers;
 //use App\Models\ManualVersion;
 use Filament\Tables\Columns\Summarizers\Count;
 use Filament\Tables\Columns\Summarizers\Sum;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Filament\Support\Colors\Color;
 use Filament\Forms;
@@ -18,6 +19,7 @@ use Filament\Forms\Get;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Tables\Columns\Summarizers\Summarizer;
 
 class TransactionsRelationManager extends RelationManager
 {
@@ -87,14 +89,36 @@ class TransactionsRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('parcelas'),
                 Tables\Columns\TextColumn::make('amount')->money('BRL')->label('Valor')
                     ->summarize(Sum::make()),
-                Tables\Columns\ToggleColumn::make('common_expense')->label('Gasto em comum')
-                    ->summarize(
-                        Count::make()->query(fn (QueryBuilder $query) => $query->where('common_expense', true)),
-                    ),
-                Tables\Columns\ToggleColumn::make('individual_expense')->label('Gasto Individual')
+                Tables\Columns\ToggleColumn::make('individual_expense')
+                    ->label('Gasto Individual')
+                    ->beforeStateUpdated(function ($record, $state) {
+                        //dd($record, $state);
+                        $record->common_expense = !$state;
+                        // Runs before the state is saved to the database.
+                    })
+                    ->afterStateUpdated(function ($record, $state) {
+                        // Runs after the state is saved to the database.
+                    })
                     ->summarize(
                         Count::make()->query(fn (QueryBuilder $query) => $query->where('individual_expense', true)),
                     ),
+                Tables\Columns\IconColumn::make('common_expense')
+                    ->label('Gasto em comum')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-badge')
+                    ->falseIcon('heroicon-o-x-mark')
+                    ->summarize([
+                        Count::make()->query(fn (QueryBuilder $query) => $query->where('common_expense', true)),
+                        Summarizer::make()
+                            ->label('Total comum')
+                            ->using(fn (QueryBuilder $query): string => $query->where('common_expense', true)->sum('amount'))
+                            ->money('BRL'),
+                        Summarizer::make()
+                            ->label('Divisão por 2')
+                            ->using(fn (QueryBuilder $query) => $query->select(DB::raw('sum(amount) / 2 as aggregate'))->where('common_expense', true)->value('aggregate'))
+                            ->money('BRL')
+                        //Sum::make()->query(fn (QueryBuilder $query) => $query->where('common_expense', true)->sum('amount')),
+                    ]),
                 /*Tables\Columns\TextColumn::make('stored_file')->label('Visualizar')
                     ->url(fn (ManualVersion $record): string => $record->stored_file ? Storage::url($record->stored_file) : '')
                     ->state(function (ManualVersion $record) {
