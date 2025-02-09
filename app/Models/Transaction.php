@@ -12,12 +12,18 @@ class Transaction extends Model
         'description',
         'parcelas',
         'amount',
+        'common_expense',
+        'individual_expense',
+        'owner_expense',
+        'who_paid'
     ];
 
     protected function casts(): array
     {
         return [
             'amount' => 'float',
+            'common_expense' => 'boolean',
+            'individual_expense' => 'boolean',
             //'transaction_date' => 'date',
         ];
     }
