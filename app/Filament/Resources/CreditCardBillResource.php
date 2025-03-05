@@ -28,7 +28,7 @@ class CreditCardBillResource extends Resource
                 Forms\Components\TextInput::make('title_description_owner')->label('Descrição/Dono da fatura')
                     ->required()
                     ->maxLength(255),
-                Forms\Components\TextInput::make('reference_date')->label('Data de referencia')
+                Forms\Components\TextInput::make('observation')->label('Obs')
                     ->required()
                     ->maxLength(255),
                 Forms\Components\TextInput::make('amount')->label('Valor')
@@ -57,7 +57,7 @@ class CreditCardBillResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('title_description_owner')->label('Fatura'),
-                Tables\Columns\TextColumn::make('reference_date')
+                Tables\Columns\TextColumn::make('reference_date_computed')
                     ->label('Data de referência')
                     ->html()
                     ->state(function (CreditCardBill $record) {

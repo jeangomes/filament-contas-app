@@ -25,6 +25,38 @@ class TransactionResource extends Resource
     {
         return $form
             ->schema([
+                Forms\Components\DatePicker::make('transaction_date')->label('Data')
+                    ->required(),
+                Forms\Components\TextInput::make('amount')->label('Valor')
+                    ->numeric()
+                    ->inputMode('decimal')
+                    ->required(),
+                Forms\Components\Radio::make('description')
+                    ->required()
+                    ->options([
+                        'Aluguel' => 'Aluguel',
+                        'Condominio' => 'Condominio',
+                        'Eventualidades' => 'Eventualidades',
+                        'LIGHT' => 'LIGHT',
+                        'Naturgy' => 'Naturgy',
+                        'Claro' => 'Claro',
+                    ])
+                    ->inline(),
+                Forms\Components\Radio::make('who_paid')
+                    ->options([
+                        'D' => 'D',
+                        'J' => 'J',
+                    ])
+                    ->inline()
+                    ->required(),
+                Forms\Components\Radio::make('common_expense')
+                    ->boolean()
+                    ->inline()
+                    ->required(),
+                Forms\Components\Radio::make('individual_expense')
+                    ->boolean()
+                    ->inline()
+                    ->required(),
 
             ]);
     }
@@ -33,13 +65,18 @@ class TransactionResource extends Resource
     {
         return $table->paginated(false)
             ->columns([
-                Tables\Columns\TextColumn::make('creditCardBill.reference_date'),
+                Tables\Columns\TextColumn::make('creditCardBill.title_description_owner'),
                 Tables\Columns\TextColumn::make('transaction_date'),
                 Tables\Columns\TextColumn::make('description'),
                 Tables\Columns\TextColumn::make('parcelas'),
                 Tables\Columns\TextColumn::make('amount')->money('BRL'),
-                Tables\Columns\ToggleColumn::make('common_expense'),
+                //Tables\Columns\ToggleColumn::make('common_expense'),
                 Tables\Columns\ToggleColumn::make('individual_expense'),
+                Tables\Columns\IconColumn::make('common_expense')
+                    ->label('Gasto em comum')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-badge')
+                    ->falseIcon('heroicon-o-x-mark')
             ])
             ->filters([
                 //
