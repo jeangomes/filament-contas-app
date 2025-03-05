@@ -10,6 +10,7 @@ class CreditCardBill extends Model
 
     protected $fillable = [
         'title_description_owner',
+        'owner_bill',
         'observation',
         'due_date',
         'amount',

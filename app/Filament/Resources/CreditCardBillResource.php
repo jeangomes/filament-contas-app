@@ -28,26 +28,26 @@ class CreditCardBillResource extends Resource
                 Forms\Components\TextInput::make('title_description_owner')->label('Descrição/Dono da fatura')
                     ->required()
                     ->maxLength(255),
-                Forms\Components\TextInput::make('observation')->label('Obs')
-                    ->required()
-                    ->maxLength(255),
+                Forms\Components\Select::make('owner_bill')->label('Dono/Pagador da fatura')
+                    ->options([
+                        'D' => 'D',
+                        'J' => 'J',
+                    ]),
                 Forms\Components\TextInput::make('amount')->label('Valor')
                     ->numeric()
                     ->inputMode('decimal')
                     ->required(),
                 Forms\Components\DatePicker::make('due_date')->label('Data de vencimento')
                     ->required(),
+                Forms\Components\TextInput::make('observation')->label('Obs')
+                    ->required()
+                    ->maxLength(255),
                 Forms\Components\Textarea::make('content_transaction')->label('Transações')
                     ->visibleOn('create')
                     ->required()
                     ->rows(10)
                     ->cols(20),
-                Forms\Components\Select::make('type')
-                    ->options([
-                        'cat' => 'Cat',
-                        'dog' => 'Dog',
-                        'rabbit' => 'Rabbit',
-                    ])->disabled()->hidden(),
+
 
             ]);
     }
@@ -57,6 +57,7 @@ class CreditCardBillResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('title_description_owner')->label('Fatura'),
+                Tables\Columns\TextColumn::make('owner_bill')->label('De quem?'),
                 Tables\Columns\TextColumn::make('reference_date_computed')
                     ->label('Data de referência')
                     ->html()

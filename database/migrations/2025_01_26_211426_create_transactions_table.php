@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('credit_card_bills', function (Blueprint $table) {
             $table->id();
             $table->string('title_description_owner');
+            $table->enum('owner_bill', ['D', 'J'])->nullable();
             $table->string('observation')->nullable();
             $table->decimal('amount', 10, 2);
             $table->date('due_date');

@@ -8,17 +8,14 @@ namespace App\Filament\Resources\CreditCardBillResource\RelationManagers;
 use Filament\Tables\Columns\Summarizers\Count;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Filament\Support\Colors\Color;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Forms\Get;
-use Illuminate\Database\Eloquent\Builder;
+//use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Columns\Summarizers\Summarizer;
 
 class TransactionsRelationManager extends RelationManager

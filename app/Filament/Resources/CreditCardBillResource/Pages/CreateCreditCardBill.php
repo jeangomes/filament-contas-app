@@ -20,7 +20,7 @@ class CreateCreditCardBill extends CreateRecord
         return $data;
     }
 
-    private function processarDespesas($texto): array
+    private function processarDespesas($texto, $who_paid): array
     {
         // Quebra o texto em linhas
         $linhas = explode("\n", trim($texto));
@@ -44,8 +44,8 @@ class CreateCreditCardBill extends CreateRecord
                     'amount' => $amount, // floatval(str_replace(',', '.', $matches[4])), // Valor como float
                     'individual_expense' => true,
                     'common_expense' => false,
-                    'owner_expense' => 'D',
-                    'who_paid'=> 'D'
+                    //'owner_expense' => 'D',
+                    'who_paid'=> $who_paid
                 ];
             }
         }
@@ -57,7 +57,7 @@ class CreateCreditCardBill extends CreateRecord
     {
         /** @var CreditCardBill $bill */
         $bill = $this->record;
-        $resultado = $this->processarDespesas($this->data['content_transaction']);
+        $resultado = $this->processarDespesas($this->data['content_transaction'], $bill->owner_bill);
         foreach ($resultado as $item) {
             $bill->transactions()->create($item);
             //$this->record->transactions()->saveMany();
