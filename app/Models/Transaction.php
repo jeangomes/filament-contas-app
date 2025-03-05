@@ -24,7 +24,7 @@ class Transaction extends Model
             'amount' => 'float',
             'common_expense' => 'boolean',
             'individual_expense' => 'boolean',
-            //'transaction_date' => 'date',
+            'transaction_date' => 'date',
         ];
     }
 
@@ -33,7 +33,7 @@ class Transaction extends Model
         return $this->belongsTo(CreditCardBill::class);
     }
 
-    public function setTransactionDateAttribute($value): void
+/*    public function setTransactionDateAttribute($value): void
     {
         $monthNames = [
             'JAN' => '01',
@@ -56,5 +56,5 @@ class Transaction extends Model
         $month = $monthNames[strtoupper($matches[2])];
         $year = date('Y'); // Ano atual, ou pode ser um ano específico
         $this->attributes['transaction_date'] = "{$year}-{$month}-{$day}";
-    }
+    }*/
 }
