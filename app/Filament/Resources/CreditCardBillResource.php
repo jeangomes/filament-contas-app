@@ -11,7 +11,8 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\HtmlString;
+use Filament\Tables\Columns\ColumnGroup;
 
 class CreditCardBillResource extends Resource
 {
@@ -77,11 +78,11 @@ class CreditCardBillResource extends Resource
                     })
                     ->dateTime('m/Y'),
                     //->timezone('America/Sao_Paulo'),
-                Tables\Columns\TextColumn::make('due_date_format2')
+                /*Tables\Columns\TextColumn::make('due_date_format2')
                     ->label('Mês/Ano Vcto')
                     ->state(function (CreditCardBill $record) {
                         return $record->due_date->format('m/Y');
-                    }),
+                    }),*/
                     //->timezone('America/Sao_Paulo'),
                 Tables\Columns\TextColumn::make('due_date')
                     ->label('Vencimento')
@@ -89,7 +90,23 @@ class CreditCardBillResource extends Resource
                     //->timezone('America/Sao_Paulo'),
                 //Tables\Columns\TextColumn::make('observation'),
                 Tables\Columns\TextColumn::make('amount')->money('BRL')->label('Valor'),
-                Tables\Columns\TextColumn::make('transactions_count')->counts('transactions')->label('Transações')
+               ColumnGroup::make('Valores', [
+
+                   Tables\Columns\TextColumn::make('transactions_sum_amount')->sum([
+                       'transactions' => fn (Builder $query) => $query->where('individual_expense', 1),
+                   ], 'amount')->money('BRL')->label('Individual'),
+
+                   Tables\Columns\TextColumn::make('transactions_common')->sum([
+                       'transactions as transactions_common' => fn (Builder $query) => $query->where('common_expense','=', 1)
+                   ], 'amount')->money('BRL') ->label(new HtmlString('Em <br /> Comum')),
+
+                   Tables\Columns\TextColumn::make('common_amount_divided_by_two')
+                       ->state(function (CreditCardBill $record) {
+                        return $record->transactions_common / 2;
+                        })
+                       ->money('BRL')->label(new HtmlString('Comum <br /> Dividido')),
+                ]),
+                Tables\Columns\TextColumn::make('transactions_count')->counts('transactions')->label('Transações'),
             ])
             ->filters([
                 //
