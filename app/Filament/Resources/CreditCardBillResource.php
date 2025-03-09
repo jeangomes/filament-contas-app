@@ -57,18 +57,20 @@ class CreditCardBillResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('title_description_owner')->label('Fatura'),
-                Tables\Columns\TextColumn::make('owner_bill')->label('De quem?'),
+                //Tables\Columns\TextColumn::make('title_description_owner')->label('Fatura'),
+                //Tables\Columns\TextColumn::make('owner_bill')->label('De quem?'),
                 Tables\Columns\TextColumn::make('reference_date_computed')
-                    ->label('Data de referência')
+                    ->label('Referência')
                     ->html()
                     ->state(function (CreditCardBill $record) {
+                        $owner = $record->owner_bill === 'D' ? 'Denilson' : 'Jean';
                         $yearBill = $record->due_date->format('Y');
                         $monthBill = $record->due_date->getTranslatedMonthName();
                         $sub = $record->due_date->subMonth();
                         $previousMonthName = $sub->getTranslatedMonthName();
                         $yearExpenses = $sub->format('Y');
-                        return "Referente a {$previousMonthName}/{$yearExpenses} <br> Pgto {$monthBill}/{$yearBill}";
+                        return "<strong>".$record->title_description_owner . ": $owner</strong>" .
+                            "<br>Referente a {$previousMonthName}/{$yearExpenses} <br> Pgto {$monthBill}/{$yearBill}";
                     }),
                 Tables\Columns\TextColumn::make('due_date_format1')
                     ->label('Mês/Ano Ref')
@@ -77,42 +79,34 @@ class CreditCardBillResource extends Resource
                         return $sub;
                     })
                     ->dateTime('m/Y'),
-                    //->timezone('America/Sao_Paulo'),
-                /*Tables\Columns\TextColumn::make('due_date_format2')
-                    ->label('Mês/Ano Vcto')
-                    ->state(function (CreditCardBill $record) {
-                        return $record->due_date->format('m/Y');
-                    }),*/
-                    //->timezone('America/Sao_Paulo'),
                 Tables\Columns\TextColumn::make('due_date')
                     ->label('Vencimento')
                     ->dateTime('d/m/Y'),
-                    //->timezone('America/Sao_Paulo'),
-                //Tables\Columns\TextColumn::make('observation'),
-                Tables\Columns\TextColumn::make('amount')->money('BRL')->label('Valor'),
-               ColumnGroup::make('Valores', [
+                Tables\Columns\TextColumn::make('transactions_count')->counts('transactions')
+                    ->label('Transações')->toggleable(isToggledHiddenByDefault: true),
 
-                   Tables\Columns\TextColumn::make('transactions_sum_amount')->sum([
-                       'transactions' => fn (Builder $query) => $query->where('individual_expense', 1),
-                   ], 'amount')->money('BRL')->label('Individual'),
+                ColumnGroup::make('Valores', [
+                    Tables\Columns\TextColumn::make('amount')->money('BRL')->label('Total Fatura'),
+                    Tables\Columns\TextColumn::make('transactions_sum_amount')->sum([
+                        'transactions' => fn(Builder $query) => $query->where('individual_expense', 1),
+                    ], 'amount')->money('BRL')->label('Individual')->toggleable(isToggledHiddenByDefault: true),
 
-                   Tables\Columns\TextColumn::make('transactions_common')->sum([
-                       'transactions as transactions_common' => fn (Builder $query) => $query->where('common_expense','=', 1)
-                   ], 'amount')->money('BRL') ->label(new HtmlString('Em <br /> Comum')),
+                    Tables\Columns\TextColumn::make('transactions_common')->sum([
+                        'transactions as transactions_common' => fn(Builder $query) => $query->where('common_expense', '=', 1)
+                    ], 'amount')->money('BRL')->label(new HtmlString('Total <br /> Comum')),
 
-                   Tables\Columns\TextColumn::make('common_amount_divided_by_two')
-                       ->state(function (CreditCardBill $record) {
-                        return $record->transactions_common / 2;
+                    Tables\Columns\TextColumn::make('common_amount_divided_by_two')
+                        ->state(function (CreditCardBill $record) {
+                            return $record->transactions_common / 2;
                         })
-                       ->money('BRL')->label(new HtmlString('Comum <br /> Dividido')),
-                ]),
-                Tables\Columns\TextColumn::make('transactions_count')->counts('transactions')->label('Transações'),
+                        ->money('BRL')->label(new HtmlString('Divisão <br /> por 2')),
+                ])
             ])
             ->filters([
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make()->hiddenLabel(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
