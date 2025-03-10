@@ -65,15 +65,16 @@ class TransactionResource extends Resource
     {
         return $table->paginated(false)
             ->columns([
-                Tables\Columns\TextColumn::make('creditCardBill.title_description_owner'),
-                Tables\Columns\TextColumn::make('transaction_date'),
-                Tables\Columns\TextColumn::make('description'),
+                Tables\Columns\TextColumn::make('creditCardBill.title_description_owner')->label('Fatura'),
+                Tables\Columns\TextColumn::make('creditCardBill.owner_bill')->label('Dono'),
+                Tables\Columns\TextColumn::make('transaction_date')->label('Data')->dateTime('d/m/Y'),
+                Tables\Columns\TextColumn::make('description')->label('Descrição'),
                 Tables\Columns\TextColumn::make('parcelas'),
-                Tables\Columns\TextColumn::make('amount')->money('BRL'),
+                Tables\Columns\TextColumn::make('amount')->money('BRL')->label('Valor'),
                 //Tables\Columns\ToggleColumn::make('common_expense'),
-                Tables\Columns\ToggleColumn::make('individual_expense'),
+                Tables\Columns\ToggleColumn::make('individual_expense')->label('Individual'),
                 Tables\Columns\IconColumn::make('common_expense')
-                    ->label('Gasto em comum')
+                    ->label('Em comum')
                     ->boolean()
                     ->trueIcon('heroicon-o-check-badge')
                     ->falseIcon('heroicon-o-x-mark')
