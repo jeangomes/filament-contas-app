@@ -70,13 +70,12 @@ class CreditCardBillResource extends Resource
                         $previousMonthName = $sub->getTranslatedMonthName();
                         $yearExpenses = $sub->format('Y');
                         return "<strong>".$record->title_description_owner . ": $owner</strong>" .
-                            "<br>Referente a {$previousMonthName}/{$yearExpenses} <br> Pgto {$monthBill}/{$yearBill}";
+                            "<br>Referente a $previousMonthName/$yearExpenses <br> Pgto $monthBill/$yearBill";
                     }),
                 Tables\Columns\TextColumn::make('due_date_format1')
                     ->label('Mês/Ano Ref')
                     ->state(function (CreditCardBill $record) {
-                        $sub = $record->due_date->subMonth();
-                        return $sub;
+                        return $record->due_date->subMonth();
                     })
                     ->dateTime('m/Y'),
                 Tables\Columns\TextColumn::make('due_date')
