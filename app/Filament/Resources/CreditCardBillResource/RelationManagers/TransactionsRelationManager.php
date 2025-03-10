@@ -5,6 +5,7 @@ namespace App\Filament\Resources\CreditCardBillResource\RelationManagers;
 //use App\ManualVersionStatus;
 //use App\ManualVersionTypes;
 //use App\Models\ManualVersion;
+use App\Models\Transaction;
 use Filament\Tables\Columns\Summarizers\Count;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Illuminate\Support\Facades\DB;
@@ -73,13 +74,18 @@ class TransactionsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table->recordUrl(null)->recordAction(null)
+            ->recordClasses(fn (Transaction $record) => match ($record->individual_expense) {
+                true => 'my-bg-primary',
+                false => '',
+            })
+            //#00ffff
             //->emptyStateHeading('No posts yet')
             ->emptyStateDescription('Depois que você salvar a primeira versão, ela aparecerá aqui.')
            // ->recordTitle(fn (ManualVersion $record): string => " - Manual: {$record->manual->title} | Versão: {$record->version_number}")
             ->recordTitleAttribute('version_number')
             ->paginated(false)
             ->columns([
-                Tables\Columns\TextColumn::make('transaction_date')->label('Data'),
+                Tables\Columns\TextColumn::make('transaction_date')->label('Data')->dateTime('d/m/Y'),
                 Tables\Columns\TextColumn::make('description')
                     ->label('Descrição')
                     ->summarize(Count::make()),
