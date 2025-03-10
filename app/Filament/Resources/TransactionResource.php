@@ -25,13 +25,7 @@ class TransactionResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\DatePicker::make('transaction_date')->label('Data')
-                    ->required(),
-                Forms\Components\TextInput::make('amount')->label('Valor')
-                    ->numeric()
-                    ->inputMode('decimal')
-                    ->required(),
-                Forms\Components\Radio::make('description')
+                Forms\Components\Select::make('description')->label('Descrição')
                     ->required()
                     ->options([
                         'Aluguel' => 'Aluguel',
@@ -40,25 +34,34 @@ class TransactionResource extends Resource
                         'LIGHT' => 'LIGHT',
                         'Naturgy' => 'Naturgy',
                         'Claro' => 'Claro',
-                    ])
-                    ->inline(),
-                Forms\Components\Radio::make('who_paid')
+                    ]),
+                Forms\Components\TextInput::make('amount')->label('Valor')
+                    ->numeric()
+                    ->inputMode('decimal')
+                    ->required(),
+                Forms\Components\DatePicker::make('transaction_date')->label('Data')
+                    ->required(),
+                Forms\Components\Radio::make('who_paid')->label('Quem pagou')
                     ->options([
                         'D' => 'D',
                         'J' => 'J',
                     ])
+                    ->default('J')
                     ->inline()
                     ->required(),
-                Forms\Components\Radio::make('common_expense')
+                Forms\Components\Radio::make('common_expense')->label('Em comum')
                     ->boolean()
                     ->inline()
-                    ->required(),
-                Forms\Components\Radio::make('individual_expense')
-                    ->boolean()
-                    ->inline()
+                    ->default(true)
                     ->required(),
 
-            ]);
+                Forms\Components\Radio::make('individual_expense')->label('Individual')
+                    ->boolean()
+                    ->inline()
+                    ->default(false)
+                    ->required(),
+
+            ])->columns(3);
     }
 
     public static function table(Table $table): Table
