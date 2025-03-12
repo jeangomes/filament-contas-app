@@ -11,6 +11,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
+use Illuminate\Support\Number;
 
 class ListResults extends Component implements HasForms, HasTable
 {
@@ -43,11 +44,17 @@ class ListResults extends Component implements HasForms, HasTable
             ]);
     }
 
-    public function render()
+    public function formatNumber($value): false|string
     {
-        $resultados = DB::select("
+        return Number::currency($value, in: 'BRL', locale: 'pt_BR');
+    }
+
+    public function render()
+    {//DATE_SUB(your_date_column, INTERVAL 1 MONTH)
+/*        $resultados = DB::select("
             SELECT
-                DATE_FORMAT(t.transaction_date, '%m/%Y') AS mes_pagamento,
+                DATE_FORMAT(t.transaction_date, '%m/%Y') AS mes_ref,
+                DATE_FORMAT(t.transaction_date, '%m/%Y') AS mes_vcto,
                 CONCAT('R$ ', FORMAT(COALESCE(SUM(CASE WHEN t.description = 'Aluguel' THEN t.amount END), 0), 2, 'pt_BR')) AS aluguel,
                 CONCAT('R$ ', FORMAT(COALESCE(SUM(CASE WHEN t.description = 'Condominio' THEN t.amount END), 0), 2, 'pt_BR')) AS condominio,
                 CONCAT('R$ ', FORMAT(COALESCE(SUM(CASE WHEN t.description = 'Eventualidades' THEN t.amount END), 0), 2, 'pt_BR')) AS eventualidades,
@@ -56,11 +63,25 @@ class ListResults extends Component implements HasForms, HasTable
                 CONCAT('R$ ', FORMAT(COALESCE(SUM(CASE WHEN t.description = 'Claro' THEN t.amount END), 0), 2, 'pt_BR')) AS claro
             FROM transactions t
             WHERE t.credit_card_bill_id IS NULL
-            GROUP BY mes_pagamento;
-        ");
+            GROUP BY mes_vcto;
+        ");*/
 
+        $resultados = Transaction::whereNull('credit_card_bill_id')
+            ->select([
+                DB::raw("DATE_FORMAT(DATE_SUB(transaction_date, INTERVAL 1 MONTH), '%m/%Y') AS mes_ref"),
+                //DB::raw("concat(DATE_FORMAT(transaction_date, '%m/%Y'), '01') AS transaction_date"),
+                //DB::raw("DATE_FORMAT(transaction_date, '%m/%Y') AS mes_ref"),
+                DB::raw("DATE_FORMAT(transaction_date, '%m/%Y') AS mes_vcto"),
+                DB::raw("COALESCE(SUM(CASE WHEN description = 'Aluguel' THEN amount END), 0) AS aluguel"),
+                DB::raw("COALESCE(SUM(CASE WHEN description = 'Condominio' THEN amount END), 0) AS condominio"),
+                DB::raw("COALESCE(SUM(CASE WHEN description = 'Eventualidades' THEN amount END), 0) AS eventualidades"),
+                DB::raw("COALESCE(SUM(CASE WHEN description = 'LIGHT' THEN amount END), 0) AS light"),
+                DB::raw("COALESCE(SUM(CASE WHEN description = 'Naturgy' THEN amount END), 0) AS naturgy"),
+                DB::raw("COALESCE(SUM(CASE WHEN description = 'Claro' THEN amount END), 0) AS claro"),
+            ])
+            ->groupBy(DB::raw("DATE_FORMAT(DATE_SUB(transaction_date, INTERVAL 1 MONTH), '%m/%Y'), DATE_FORMAT(transaction_date, '%m/%Y')"))
+            ->get();
 
-        //dd($resultados);
         return view('livewire.list-results', [
             'resultados' => $resultados,
             'finalBalances' => $this->calculationBalance()
@@ -69,8 +90,9 @@ class ListResults extends Component implements HasForms, HasTable
 
     private function calculationBalance(): array
     {
-        $totalPaidCommon = DB::select("SELECT who_paid AS participant, SUM(transactions.amount) AS total_paid, DATE_FORMAT(ccb.due_date, '%Y-%m') AS mes_ano
-        FROM transactions inner join credit_card_bills ccb on transactions.credit_card_bill_id = ccb.id
+        $totalPaidCommon = DB::select("SELECT who_paid AS participant, SUM(transactions.amount) AS total_paid,
+       IF(credit_card_bill_id is not null, DATE_FORMAT(ccb.due_date, '%Y-%m'),  DATE_FORMAT(transaction_date, '%Y-%m')) AS mes_ano
+        FROM transactions left join credit_card_bills ccb on transactions.credit_card_bill_id = ccb.id
         WHERE common_expense = 1
         GROUP BY mes_ano, who_paid
         order by mes_ano,participant");

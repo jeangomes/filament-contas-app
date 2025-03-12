@@ -6,6 +6,7 @@ use App\Filament\Resources\TransactionResource\Pages;
 use App\Filament\Resources\TransactionResource\RelationManagers;
 use App\Models\Transaction;
 use Filament\Forms;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -25,43 +26,47 @@ class TransactionResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Select::make('description')->label('Descrição')
-                    ->required()
-                    ->options([
-                        'Aluguel' => 'Aluguel',
-                        'Condominio' => 'Condominio',
-                        'Eventualidades' => 'Eventualidades',
-                        'LIGHT' => 'LIGHT',
-                        'Naturgy' => 'Naturgy',
-                        'Claro' => 'Claro',
-                    ]),
-                Forms\Components\TextInput::make('amount')->label('Valor')
-                    ->numeric()
-                    ->inputMode('decimal')
-                    ->required(),
-                Forms\Components\DatePicker::make('transaction_date')->label('Data')
-                    ->required(),
-                Forms\Components\Radio::make('who_paid')->label('Quem pagou')
-                    ->options([
-                        'D' => 'D',
-                        'J' => 'J',
-                    ])
-                    ->default('J')
-                    ->inline()
-                    ->required(),
-                Forms\Components\Radio::make('common_expense')->label('Em comum')
-                    ->boolean()
-                    ->inline()
-                    ->default(true)
-                    ->required(),
+                Repeater::make('transactions')
+                    ->schema([
+                        Forms\Components\Select::make('description')->label('Descrição')
+                            ->required()
+                            ->options([
+                                'Aluguel' => 'Aluguel',
+                                'Condominio' => 'Condominio',
+                                'Eventualidades' => 'Eventualidades',
+                                'LIGHT' => 'LIGHT',
+                                'Naturgy' => 'Naturgy',
+                                'Claro' => 'Claro',
+                            ]),
+                        Forms\Components\TextInput::make('amount')->label('Valor')
+                            ->numeric()
+                            ->inputMode('decimal')
+                            ->required(),
+                        Forms\Components\DatePicker::make('transaction_date')->label('Data')
+                            ->required(),
+                        Forms\Components\Radio::make('who_paid')->label('Quem pagou')
+                            ->options([
+                                'D' => 'D',
+                                'J' => 'J',
+                            ])
+                            ->default('J')
+                            ->inline()
+                            ->required(),
+                        Forms\Components\Radio::make('common_expense')->label('Em comum')
+                            ->boolean()
+                            ->inline()
+                            ->default(true)
+                            ->required(),
 
-                Forms\Components\Radio::make('individual_expense')->label('Individual')
-                    ->boolean()
-                    ->inline()
-                    ->default(false)
-                    ->required(),
+                        Forms\Components\Radio::make('individual_expense')->label('Individual')
+                            ->boolean()
+                            ->inline()
+                            ->default(false)
+                            ->required(),
+                    ])->cloneable()
+                    ->columns(3),
 
-            ])->columns(3);
+            ])->columns(1);
     }
 
     public static function table(Table $table): Table

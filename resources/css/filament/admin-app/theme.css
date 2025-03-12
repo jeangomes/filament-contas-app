@@ -2,7 +2,24 @@
 
 @config 'tailwind.config.js';
 
-a .py-4 {
-    padding-bottom: 0.3rem !important;
-    padding-top: 0.3rem !important;
+.fi-ta-cell, .fi-ta-cell div{
+    padding-top: 1px !important;
+    padding-bottom: 1px !important;
+}
+.fi-ta-table > thead > tr {
+    @apply divide-x divide-gray-200 dark:divide-white/5;
+}
+
+.fi-ta-row {
+    @apply divide-x divide-gray-200 dark:divide-white/5;
+}
+
+.fi-ta-cell, .fi-ta-cell div{
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
+    margin-top: 0px !important;
+    margin-bottom: 0px !important;
+}
+.my-bg-primary {
+    background-color: #00ffff;
 }

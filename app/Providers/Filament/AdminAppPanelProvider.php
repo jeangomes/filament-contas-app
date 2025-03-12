@@ -22,6 +22,8 @@ class AdminAppPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
+        //dd('se não tiver gastos para os dois, da pau, se não tiver transactions em comum em uma bill também, como fazer o fechamento do mes como relatorio [considerar datas das transações sem credit_card_bill_id]
+        //e data das credit_card_bills, prototipo do web.php muda, cadastrar as contas de consumo como bills?');
         return $panel
             ->default()
             ->id('admin-app')
