@@ -20,7 +20,6 @@ return new class extends Migration
             $table->date('due_date');
             $table->decimal('common_amount', 10, 2)->default(0);
             $table->decimal('individual_amount', 10, 2)->default(0);
-            $table->decimal('common_amount_divided_by_two', 10, 2)->default(0);
             $table->timestamps();
         });
 
