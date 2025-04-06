@@ -68,7 +68,7 @@ class TransactionResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table->paginated(false)
+        return $table->paginated([25])
             ->columns([
                 Tables\Columns\TextColumn::make('creditCardBill.title_description_owner')->label('Fatura'),
                 Tables\Columns\TextColumn::make('creditCardBill.owner_bill')->label('Dono'),
@@ -77,7 +77,7 @@ class TransactionResource extends Resource
                 Tables\Columns\TextColumn::make('parcelas'),
                 Tables\Columns\TextColumn::make('amount')->money('BRL')->label('Valor'),
                 //Tables\Columns\ToggleColumn::make('common_expense'),
-                Tables\Columns\ToggleColumn::make('individual_expense')->label('Individual'),
+                Tables\Columns\IconColumn::make('individual_expense')->label('Individual'),
                 Tables\Columns\IconColumn::make('common_expense')
                     ->label('Em comum')
                     ->boolean()
