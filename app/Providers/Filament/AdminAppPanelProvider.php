@@ -29,7 +29,7 @@ class AdminAppPanelProvider extends PanelProvider
             ->id('admin-app')
             ->path('/')
             ->login()
-            ->sidebarWidth('17rem')
+            ->sidebarWidth('16rem')
             ->sidebarCollapsibleOnDesktop()
             ->colors([
                 'primary' => Color::Amber,
