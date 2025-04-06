@@ -7,32 +7,40 @@
     <br>
 
     <div class="container mx-auto mt-8 px-4">
-        <h2 class="text-2xl font-semibold text-center mb-6">Resumo de Pagamentos</h2>
+        <h2 class="text-2xl font-semibold text-center mb-6">Resumo de Pagamentos das Contas da Casa</h2>
         <div class="overflow-x-auto">
-            <table class="min-w-full table-auto border-collapse">
+            <table class="min-w-full table-auto border-collapse divide-y divide-gray-200 table-striped">
                 <thead class="bg-gray-800">
                 <tr>
-                    <th class="py-3 px-4 text-left">Mês Ref</th>
-                    <th class="py-3 px-4 text-left">Mês Vencimento</th>
-                    <th class="py-3 px-4 text-left">Aluguel</th>
-                    <th class="py-3 px-4 text-left">Condomínio</th>
-                    <th class="py-3 px-4 text-left">Eventualidades</th>
-                    <th class="py-3 px-4 text-left">LIGHT</th>
-                    <th class="py-3 px-4 text-left">Naturgy</th>
-                    <th class="py-3 px-4 text-left">Claro</th>
+                    <th class="border py-1 px-2 text-left text-sm">Mês Ref</th>
+                    <th class="border py-1 px-2 text-left text-sm">Mês <br> Vencimento</th>
+                    <th class="border py-1 px-2 text-left text-sm">Aluguel</th>
+                    <th class="border py-1 px-2 text-left text-sm">Condomínio</th>
+                    <th class="border py-1 px-2 text-left text-sm">Eventualidades</th>
+                    <th class="border py-1 px-2 text-left text-sm">LIGHT</th>
+                    <th class="border py-1 px-2 text-left text-sm">Naturgy</th>
+                    <th class="border py-1 px-2 text-left text-sm">Claro</th>
+                    <th class="border py-1 px-2 text-left text-sm">Total <br> Casa</th>
+                    <th class="border py-1 px-2 text-left text-sm">Dividido <br> por 2</th>
+                    <th class="border py-1 px-2 text-left text-sm">Diferença <br> a pagar</th>
+                    <th class="border py-1 px-2 text-left text-sm">Quem <br> paga</th>
                 </tr>
                 </thead>
                 <tbody>
                 @foreach($resultados as $resultado)
-                    <tr class="border-b hover:bg-gray-100">
-                        <td class="py-3 px-4">{{ $resultado->mes_ref }}</td>
-                        <td class="py-3 px-4">{{ $resultado->mes_vcto }}</td>
-                        <td class="py-3 px-4">{{ $this->formatNumber($resultado->aluguel) }}</td>
-                        <td class="py-3 px-4">{{ $this->formatNumber($resultado->condominio) }}</td>
-                        <td class="py-3 px-4">{{ $this->formatNumber($resultado->eventualidades) }}</td>
-                        <td class="py-3 px-4">{{ $this->formatNumber($resultado->light) }}</td>
-                        <td class="py-3 px-4">{{ $this->formatNumber($resultado->naturgy) }}</td>
-                        <td class="py-3 px-4">{{ $this->formatNumber($resultado->claro) }}</td>
+                    <tr class="border-b {!! $loop->even ? 'my-striped-color' : ''!!}">
+                        <td class="border py-1 px-2 text-sm">{{ $resultado->mes_ref }}</td>
+                        <td class="border py-1 px-2 text-sm">{{ $resultado->mes_vcto }}</td>
+                        <td class="border py-1 px-2 text-sm">{{ $this->formatNumber($resultado->aluguel) }}</td>
+                        <td class="border py-1 px-2 text-sm">{{ $this->formatNumber($resultado->condominio) }}</td>
+                        <td class="border py-1 px-2 text-sm">{{ $this->formatNumber($resultado->eventualidades) }}</td>
+                        <td class="border py-1 px-2 text-sm">{{ $this->formatNumber($resultado->light) }}</td>
+                        <td class="border py-1 px-2 text-sm">{{ $this->formatNumber($resultado->naturgy) }}</td>
+                        <td class="border py-1 px-2 text-sm">{{ $this->formatNumber($resultado->claro) }}</td>
+                        <td class="border py-1 px-2 text-sm">{{ $this->formatNumber($resultado->amount_home_expenses) }}</td>
+                        <td class="border py-1 px-2 text-sm">{{ $this->formatNumber($resultado->amount_home_expenses / 2) }}</td>
+                        <td class="border py-1 px-2 text-sm">{{ $this->formatNumber($resultado->balance) }}</td>
+                        <td class="border py-1 px-2 text-sm">{{ $resultado->balance_payer }}</td>
                     </tr>
                 @endforeach
                 </tbody>
@@ -46,7 +54,10 @@
             @foreach ($finalBalances as $balance)
             <tr>
                 <td>
-                    {!! "Mês: {$balance['mes_ano']} - {$balance['participant']} pagou {$balance['total_paid']} e deveria pagar {$balance['share']}, saldo: {$balance['balance']}" !!}
+                    {!! "Mês: {$balance['mes_ano']} -
+                    {$balance['participant']} pagou {$this->formatNumber($balance['total_paid'])}
+                    e deveria pagar {$this->formatNumber($balance['share'])},
+                     saldo: {$this->formatNumber($balance['balance'])}" !!}
                 </td>
             </tr>
             @endforeach

@@ -50,42 +50,43 @@ class ListResults extends Component implements HasForms, HasTable
     }
 
     public function render()
-    {//DATE_SUB(your_date_column, INTERVAL 1 MONTH)
-/*        $resultados = DB::select("
-            SELECT
-                DATE_FORMAT(t.transaction_date, '%m/%Y') AS mes_ref,
-                DATE_FORMAT(t.transaction_date, '%m/%Y') AS mes_vcto,
-                CONCAT('R$ ', FORMAT(COALESCE(SUM(CASE WHEN t.description = 'Aluguel' THEN t.amount END), 0), 2, 'pt_BR')) AS aluguel,
-                CONCAT('R$ ', FORMAT(COALESCE(SUM(CASE WHEN t.description = 'Condominio' THEN t.amount END), 0), 2, 'pt_BR')) AS condominio,
-                CONCAT('R$ ', FORMAT(COALESCE(SUM(CASE WHEN t.description = 'Eventualidades' THEN t.amount END), 0), 2, 'pt_BR')) AS eventualidades,
-                CONCAT('R$ ', FORMAT(COALESCE(SUM(CASE WHEN t.description = 'LIGHT' THEN t.amount END), 0), 2, 'pt_BR')) AS light,
-                CONCAT('R$ ', FORMAT(COALESCE(SUM(CASE WHEN t.description = 'Naturgy' THEN t.amount END), 0), 2, 'pt_BR')) AS naturgy,
-                CONCAT('R$ ', FORMAT(COALESCE(SUM(CASE WHEN t.description = 'Claro' THEN t.amount END), 0), 2, 'pt_BR')) AS claro
-            FROM transactions t
-            WHERE t.credit_card_bill_id IS NULL
-            GROUP BY mes_vcto;
-        ");*/
-
-        $resultados = Transaction::whereNull('credit_card_bill_id')
+    {
+        $resultados = Transaction::query()->whereNull('credit_card_bill_id')
             ->select([
-                DB::raw("DATE_FORMAT(DATE_SUB(transaction_date, INTERVAL 1 MONTH), '%m/%Y') AS mes_ref"),
-                //DB::raw("concat(DATE_FORMAT(transaction_date, '%m/%Y'), '01') AS transaction_date"),
-                //DB::raw("DATE_FORMAT(transaction_date, '%m/%Y') AS mes_ref"),
-                DB::raw("DATE_FORMAT(transaction_date, '%m/%Y') AS mes_vcto"),
+                DB::raw("DATE_FORMAT(DATE_SUB(transaction_date, INTERVAL 1 MONTH), '%Y-%m') AS mes_ref"),
+                DB::raw("DATE_FORMAT(transaction_date, '%Y-%m') AS mes_vcto"),
                 DB::raw("COALESCE(SUM(CASE WHEN description = 'Aluguel' THEN amount END), 0) AS aluguel"),
-                DB::raw("COALESCE(SUM(CASE WHEN description = 'Condominio' THEN amount END), 0) AS condominio"),
+                DB::raw("COALESCE(SUM(CASE WHEN description = 'Condomínio' THEN amount END), 0) AS condominio"),
                 DB::raw("COALESCE(SUM(CASE WHEN description = 'Eventualidades' THEN amount END), 0) AS eventualidades"),
                 DB::raw("COALESCE(SUM(CASE WHEN description = 'LIGHT' THEN amount END), 0) AS light"),
                 DB::raw("COALESCE(SUM(CASE WHEN description = 'Naturgy' THEN amount END), 0) AS naturgy"),
                 DB::raw("COALESCE(SUM(CASE WHEN description = 'Claro' THEN amount END), 0) AS claro"),
             ])
-            ->groupBy(DB::raw("DATE_FORMAT(DATE_SUB(transaction_date, INTERVAL 1 MONTH), '%m/%Y'), DATE_FORMAT(transaction_date, '%m/%Y')"))
+            ->groupBy(DB::raw("DATE_FORMAT(DATE_SUB(transaction_date, INTERVAL 1 MONTH), '%Y-%m'), DATE_FORMAT(transaction_date, '%Y-%m')"))
             ->get();
+
+        $finalBalances = $this->calculationBalance();
+        $resultados->map(function ($transaction) use ($resultados, $finalBalances) {
+            $transaction->amount_home_expenses = $transaction->aluguel + $transaction->condominio + $transaction->eventualidades +
+            $transaction->light+$transaction->naturgy+$transaction->claro;
+            $balance = $this->filterBalance($finalBalances, $transaction->mes_vcto);
+            $transaction->balance = $balance ? $balance['balance'] : 0;
+            $transaction->balance_payer = $balance ? $balance['participant'] : '';
+            return $transaction;
+        });
+        //dd(76);
 
         return view('livewire.list-results', [
             'resultados' => $resultados,
-            'finalBalances' => $this->calculationBalance()
+            'finalBalances' => $finalBalances,
         ]);
+    }
+
+    private function filterBalance($finalBalances, $dueMonth)
+    {
+        return collect($finalBalances)->first(function ($value) use ($dueMonth) {
+            return $value['mes_ano'] === $dueMonth && $value['balance'] < 0;
+        });
     }
 
     private function calculationBalance(): array
