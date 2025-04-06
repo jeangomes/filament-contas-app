@@ -1,10 +1,5 @@
 <div>
     {{-- A good traveler has no fixed plans and is not intent upon arriving. --}}
-    <br>
-    <div style="display: none;">
-        {{ $this->table }}
-    </div>
-    <br>
 
     <div class="container mx-auto mt-8 px-4">
         <h2 class="text-2xl font-semibold text-center mb-6">Resumo de Pagamentos das Contas da Casa</h2>
@@ -16,7 +11,7 @@
                     <th class="border py-1 px-2 text-left text-sm">Mês <br> Vencimento</th>
                     <th class="border py-1 px-2 text-left text-sm">Aluguel</th>
                     <th class="border py-1 px-2 text-left text-sm">Condomínio</th>
-                    <th class="border py-1 px-2 text-left text-sm">Eventualidades</th>
+                    <th class="border py-1 px-2 text-left text-sm">Eventuais</th>
                     <th class="border py-1 px-2 text-left text-sm">LIGHT</th>
                     <th class="border py-1 px-2 text-left text-sm">Naturgy</th>
                     <th class="border py-1 px-2 text-left text-sm">Claro</th>
