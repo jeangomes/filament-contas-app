@@ -19,15 +19,15 @@ class CreditCardBillResource extends Resource
     protected static ?string $model = CreditCardBill::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-    protected static ?string $modelLabel = 'Fatura de cartão/Conta';
-    protected static ?string $pluralModelLabel = 'Faturas de cartão/Contas';
+    protected static ?string $modelLabel = 'Fatura de cartão';
+    protected static ?string $pluralModelLabel = 'Faturas de cartão';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\TextInput::make('title_description_owner')->label('Descrição/Dono da fatura')
-                    ->required()
+                    ->required()->default('Fatura NB')
                     ->maxLength(255),
                 Forms\Components\Select::make('owner_bill')->label('Dono/Pagador da fatura')
                     ->options([
@@ -41,7 +41,6 @@ class CreditCardBillResource extends Resource
                 Forms\Components\DatePicker::make('due_date')->label('Data de vencimento')
                     ->required(),
                 Forms\Components\TextInput::make('observation')->label('Obs')
-                    ->required()
                     ->maxLength(255),
                 Forms\Components\Textarea::make('content_transaction')->label('Transações')
                     ->visibleOn('create')
@@ -57,8 +56,6 @@ class CreditCardBillResource extends Resource
     {
         return $table
             ->columns([
-                //Tables\Columns\TextColumn::make('title_description_owner')->label('Fatura'),
-                //Tables\Columns\TextColumn::make('owner_bill')->label('De quem?'),
                 Tables\Columns\TextColumn::make('reference_date_computed')
                     ->label('Referência')
                     ->html()
@@ -86,17 +83,17 @@ class CreditCardBillResource extends Resource
 
                 ColumnGroup::make('Valores', [
                     Tables\Columns\TextColumn::make('amount')->money('BRL')->label('Total Fatura'),
-                    Tables\Columns\TextColumn::make('transactions_sum_amount')->sum([
+                    Tables\Columns\TextColumn::make('individual_amount')/*->sum([
                         'transactions' => fn(Builder $query) => $query->where('individual_expense', 1),
-                    ], 'amount')->money('BRL')->label('Individual')->toggleable(isToggledHiddenByDefault: true),
+                    ], 'amount')*/->money('BRL')->label('Individual'),
 
-                    Tables\Columns\TextColumn::make('transactions_common')->sum([
+                    Tables\Columns\TextColumn::make('common_amount')/*->sum([
                         'transactions as transactions_common' => fn(Builder $query) => $query->where('common_expense', '=', 1)
-                    ], 'amount')->money('BRL')->label(new HtmlString('Total <br /> Comum')),
+                    ], 'amount')*/->money('BRL')->label(new HtmlString('Total <br /> Comum')),
 
                     Tables\Columns\TextColumn::make('common_amount_divided_by_two')
                         ->state(function (CreditCardBill $record) {
-                            return $record->transactions_common / 2;
+                            return $record->common_amount / 2;
                         })
                         ->money('BRL')->label(new HtmlString('Divisão <br /> por 2')),
                 ])
