@@ -29,7 +29,7 @@ class CreditCardBillResource extends Resource
                 Forms\Components\TextInput::make('title_description_owner')->label('Descrição/Dono da fatura')
                     ->required()->default('Fatura NB')
                     ->maxLength(255),
-                Forms\Components\Select::make('owner_bill')->label('Dono/Pagador da fatura')
+                Forms\Components\Select::make('owner_bill')->label('Dono/Pagador da fatura')->required()
                     ->options([
                         'D' => 'D',
                         'J' => 'J',
@@ -42,6 +42,11 @@ class CreditCardBillResource extends Resource
                     ->required(),
                 Forms\Components\TextInput::make('observation')->label('Obs')
                     ->maxLength(255),
+                Forms\Components\Select::make('origin_format')->label('Origem das transações')->required()
+                    ->options([
+                        'CSV' => 'CSV',
+                        'PDF' => 'PDF',
+                    ]),
                 Forms\Components\Textarea::make('content_transaction')->label('Transações')
                     ->visibleOn('create')
                     ->required()

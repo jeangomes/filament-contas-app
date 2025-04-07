@@ -4,13 +4,12 @@ namespace App\Filament\Resources\CreditCardBillResource\Pages;
 
 use App\Filament\Resources\CreditCardBillResource;
 use App\Models\CreditCardBill;
-//use App\Models\Transaction;
-use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateCreditCardBill extends CreateRecord
 {
     protected static string $resource = CreditCardBillResource::class;
+    protected ?bool $hasDatabaseTransactions = true;
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
@@ -53,19 +52,53 @@ class CreateCreditCardBill extends CreateRecord
         return $resultado;
     }
 
+    private function processarDespesasFromCSV($texto, $who_paid): array
+    {
+        //dd($texto, $who_paid);
+        $csv = $texto;
+        $lines = explode(PHP_EOL, trim($csv));
+        $data = [];
+        if (count($lines) > 1) {
+            $header = str_getcsv(array_shift($lines)); // primeira linha como cabeçalho
+            foreach ($lines as $line) {
+                if (trim($line) === '') continue;
+                $row = str_getcsv($line);
+                $item = array_combine($header, $row);
+                // Chaves adicionais fixas
+                //$item['common_expense'] = false;
+                //$item['category'] = null;
+                $data[] = $item;
+            }
+        }
+        $resultado = [];
+        foreach ($data as $item) {
+            $resultado[] = [
+                'transaction_date' => $item['date'],
+                'description' => $item['title'],
+                //'parcelas' => $matches[3] ?? null, // Parcelas (ex.: "1/3"), se existirem
+                'amount' => $item['amount'], // floatval(str_replace(',', '.', $matches[4])), // Valor como float
+                'individual_expense' => true,
+                'common_expense' => false,
+                //'owner_expense' => 'D',
+                'who_paid'=> $who_paid
+            ];
+        }
+
+        return $resultado;
+    }
+
     protected function afterCreate(): void
     {
         /** @var CreditCardBill $bill */
         $bill = $this->record;
-        $resultado = $this->processarDespesas($this->data['content_transaction'], $bill->owner_bill);
+        if ($this->data['origin_format'] === 'CSV') {
+            $resultado = $this->processarDespesasFromCSV($this->data['content_transaction'], $bill->owner_bill);
+        } else {
+            $resultado = $this->processarDespesas($this->data['content_transaction'], $bill->owner_bill);
+        }
         foreach ($resultado as $item) {
             $bill->transactions()->create($item);
-            //$this->record->transactions()->saveMany();
-            //dump($item);
         }
-        //dd($this->data,$this->record->exists,$this->record->id);
-        // Runs after the form fields are saved to the database.
-       // dd('salvou');
     }
 
     private function setTransactionDate($value): string
@@ -90,6 +123,7 @@ class CreateCreditCardBill extends CreateRecord
         $day = $matches[1];
         $month = $monthNames[strtoupper($matches[2])];
         $year = date('Y'); // Ano atual, ou pode ser um ano específico
-        return "{$year}-{$month}-{$day}";
+        //dd($year);
+        return "$year-$month-$day";
     }
 }
