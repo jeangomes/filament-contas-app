@@ -84,6 +84,7 @@ class TransactionResource extends Resource
                     ->trueIcon('heroicon-o-check-badge')
                     ->falseIcon('heroicon-o-x-mark')
             ])
+            ->defaultSort('id', 'desc')
             ->filters([
                 //
             ])

@@ -103,6 +103,7 @@ class CreditCardBillResource extends Resource
                         ->money('BRL')->label(new HtmlString('Divisão <br /> por 2')),
                 ])
             ])
+            ->defaultSort('id', 'desc')
             ->filters([
                 //
             ])

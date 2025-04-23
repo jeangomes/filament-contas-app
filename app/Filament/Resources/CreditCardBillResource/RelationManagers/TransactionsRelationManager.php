@@ -134,6 +134,8 @@ class TransactionsRelationManager extends RelationManager
                     ->openUrlInNewTab(),*/
                 //Tables\Columns\TextColumn::make('topics_count')->counts('topics')->label('Tópicos'),
             ])
+            //->defaultSort('transaction_date', 'asc')->defaultSort('amount', 'asc')
+            ->defaultSort(fn ($query) => $query->orderBy('transaction_date', 'asc')->orderBy('id', 'asc'))
             ->filters([
                 //
             ])
