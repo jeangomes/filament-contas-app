@@ -18,7 +18,8 @@ class Transaction extends Model
         'common_expense',
         'individual_expense',
         'owner_expense',
-        'who_paid'
+        'who_paid',
+        'origin','tipo','category'
     ];
 
     protected function casts(): array
@@ -31,6 +32,7 @@ class Transaction extends Model
         ];
     }
 
+    /** @return BelongsTo<CreditCardBill, $this> */
     public function creditCardBill(): BelongsTo
     {
         return $this->belongsTo(CreditCardBill::class);
@@ -41,13 +43,15 @@ class Transaction extends Model
         static::updated(function (Transaction $transaction) {
             $transaction->load(['creditCardBill']);
             $creditCardBill = $transaction->creditCardBill;
-            $creditCardBill->common_amount = $creditCardBill->transactions()
-                ->where('common_expense', '=', 1)
-                ->sum('amount');
-            $creditCardBill->individual_amount = $creditCardBill->transactions()
-                ->where('individual_expense', '=', 1)
-                ->sum('amount');
-            $creditCardBill->save();
+            if ($creditCardBill) {
+                $creditCardBill->common_amount = $creditCardBill->transactions()
+                    ->where('common_expense', '=', 1)
+                    ->sum('amount');
+                $creditCardBill->individual_amount = $creditCardBill->transactions()
+                    ->where('individual_expense', '=', 1)
+                    ->sum('amount');
+                $creditCardBill->save();
+            }
         });
     }
 }

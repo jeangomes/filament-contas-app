@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class CreditCardBill extends Model
 {
-
     protected $fillable = [
         'title_description_owner',
         'owner_bill',
@@ -27,6 +26,7 @@ class CreditCardBill extends Model
         ];
     }
 
+    /** @return HasMany<Transaction, $this> */
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
