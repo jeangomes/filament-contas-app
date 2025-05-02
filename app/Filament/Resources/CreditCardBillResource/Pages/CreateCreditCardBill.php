@@ -91,10 +91,9 @@ class CreateCreditCardBill extends CreateRecord
     {
         /** @var CreditCardBill $bill */
         $bill = $this->record;
+        $resultado = $this->processarDespesas($this->data['content_transaction'], $bill->owner_bill);
         if ($this->data['origin_format'] === 'CSV') {
             $resultado = $this->processarDespesasFromCSV($this->data['content_transaction'], $bill->owner_bill);
-        } else {
-            $resultado = $this->processarDespesas($this->data['content_transaction'], $bill->owner_bill);
         }
         foreach ($resultado as $item) {
             $bill->transactions()->create($item);

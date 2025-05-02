@@ -27,11 +27,6 @@ class ListResults extends Component implements HasForms, HasTable
                 TextColumn::make('mes_pagamento')
                     ->label('Mês de Pagamento'),
                 TextColumn::make('aluguel'),
-                TextColumn::make('condominio'),
-                TextColumn::make('eventualidades'),
-                TextColumn::make('light'),
-                TextColumn::make('naturgy'),
-                TextColumn::make('claro'),
             ])
             ->filters([
                 // ...
@@ -51,24 +46,24 @@ class ListResults extends Component implements HasForms, HasTable
 
     public function render()
     {
+        $dateRef = "DATE_FORMAT(DATE_SUB(transaction_date, INTERVAL 1 MONTH), '%Y-%m')";
+        $dateVcto = "DATE_FORMAT(transaction_date, '%Y-%m')";
         $resultados = Transaction::query()->whereNull('credit_card_bill_id')
-            ->select([
-                DB::raw("DATE_FORMAT(DATE_SUB(transaction_date, INTERVAL 1 MONTH), '%Y-%m') AS mes_ref"),
-                DB::raw("DATE_FORMAT(transaction_date, '%Y-%m') AS mes_vcto"),
-                DB::raw("COALESCE(SUM(CASE WHEN description = 'Aluguel' THEN amount END), 0) AS aluguel"),
-                DB::raw("COALESCE(SUM(CASE WHEN description = 'Condomínio' THEN amount END), 0) AS condominio"),
-                DB::raw("COALESCE(SUM(CASE WHEN description = 'Eventualidades' THEN amount END), 0) AS eventualidades"),
-                DB::raw("COALESCE(SUM(CASE WHEN description = 'LIGHT' THEN amount END), 0) AS light"),
-                DB::raw("COALESCE(SUM(CASE WHEN description = 'Naturgy' THEN amount END), 0) AS naturgy"),
-                DB::raw("COALESCE(SUM(CASE WHEN description = 'Claro' THEN amount END), 0) AS claro"),
-            ])
-            ->groupBy(DB::raw("DATE_FORMAT(DATE_SUB(transaction_date, INTERVAL 1 MONTH), '%Y-%m'), DATE_FORMAT(transaction_date, '%Y-%m')"))
+            ->selectRaw("$dateRef AS mes_ref")
+            ->selectRaw("$dateVcto AS mes_vcto")
+            ->selectRaw("COALESCE(SUM(CASE WHEN description = 'Aluguel' THEN amount END), 0) AS aluguel")
+            ->selectRaw("COALESCE(SUM(CASE WHEN description = 'Condomínio' THEN amount END), 0) AS condominio")
+            ->selectRaw("COALESCE(SUM(CASE WHEN description = 'Eventualidades' THEN amount END), 0) AS eventualidades")
+            ->selectRaw("COALESCE(SUM(CASE WHEN description = 'LIGHT' THEN amount END), 0) AS light")
+            ->selectRaw("COALESCE(SUM(CASE WHEN description = 'Naturgy' THEN amount END), 0) AS naturgy")
+            ->selectRaw("COALESCE(SUM(CASE WHEN description = 'Claro' THEN amount END), 0) AS claro")
+            ->groupByRaw("$dateRef, $dateVcto")
             ->get();
 
         $finalBalances = $this->calculationBalance();
         $resultados->map(function ($transaction) use ($resultados, $finalBalances) {
             $transaction->amount_home_expenses = $transaction->aluguel + $transaction->condominio + $transaction->eventualidades +
-            $transaction->light+$transaction->naturgy+$transaction->claro;
+                $transaction->light + $transaction->naturgy + $transaction->claro;
             $balance = $this->filterBalance($finalBalances, $transaction->mes_vcto);
             $transaction->balance = $balance ? $balance['balance'] : 0;
             $transaction->balance_payer = $balance ? $balance['participant'] : '';
