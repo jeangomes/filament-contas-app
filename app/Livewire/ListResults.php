@@ -86,12 +86,15 @@ class ListResults extends Component implements HasForms, HasTable
 
     private function calculationBalance(): array
     {
-        $totalPaidCommon = DB::select("SELECT who_paid AS participant, SUM(transactions.amount) AS total_paid,
-       IF(credit_card_bill_id is not null, DATE_FORMAT(ccb.due_date, '%Y-%m'),  DATE_FORMAT(transaction_date, '%Y-%m')) AS mes_ano
-        FROM transactions left join credit_card_bills ccb on transactions.credit_card_bill_id = ccb.id
-        WHERE common_expense = 1
-        GROUP BY mes_ano, who_paid
-        order by mes_ano,participant");
+        $totalPaidCommon = DB::table('transactions')
+            ->selectRaw('who_paid AS participant')
+            ->selectRaw('SUM(transactions.amount) AS total_paid')
+            ->selectRaw("IF(credit_card_bill_id is not null, DATE_FORMAT(ccb.due_date, '%Y-%m'),  DATE_FORMAT(transaction_date, '%Y-%m')) AS mes_ano")
+            ->leftJoin('credit_card_bills as ccb', 'transactions.credit_card_bill_id', '=', 'ccb.id')
+            ->where('common_expense','=',1)
+            ->groupByRaw('mes_ano, who_paid')
+            ->orderByRaw('mes_ano, participant')
+            ->get()->toArray();
 
         $balancesByMonth = [];
 
