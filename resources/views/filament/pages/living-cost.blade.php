@@ -5,7 +5,7 @@
             <h2 class="text-2xl font-semibold text-center mb-6">Resumo de Pagamentos das Contas da Casa</h2>
             <div class="overflow-x-auto">
                 <table class="min-w-full table-auto border-collapse divide-y divide-gray-200 table-striped">
-                    <thead class="bg-gray-800">
+                    <thead>
                     <tr>
                         <th class="border py-1 px-2 text-left text-sm">Mês Ref</th>
                         <th class="border py-1 px-2 text-left text-sm">Mês <br> Vencimento</th>
