@@ -10,7 +10,6 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
 use Filament\Tables\Columns\ColumnGroup;
 
@@ -26,7 +25,7 @@ class CreditCardBillResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('title_description_owner')->label('Descrição/Dono da fatura')
+                Forms\Components\TextInput::make('title_description_owner')->label('Descrição')
                     ->required()->default('Fatura NB')
                     ->maxLength(255),
                 Forms\Components\Select::make('owner_bill')->label('Dono/Pagador da fatura')->required()
@@ -40,8 +39,8 @@ class CreditCardBillResource extends Resource
                     ->required(),
                 Forms\Components\DatePicker::make('due_date')->label('Data de vencimento')
                     ->required(),
-                Forms\Components\TextInput::make('observation')->label('Obs')
-                    ->maxLength(255),
+                Forms\Components\Select::make('most_common_expenses')->label('Em comum por padrão')->required()
+                    ->boolean(),
                 Forms\Components\Select::make('origin_format')->label('Origem das transações')->required()
                     ->options([
                         'CSV' => 'CSV',
@@ -51,10 +50,10 @@ class CreditCardBillResource extends Resource
                     ->visibleOn('create')
                     ->required()
                     ->rows(10)
-                    ->cols(20),
+                    ->cols(20)->columnSpanFull(),
 
 
-            ]);
+            ])->columns(3);
     }
 
     public static function table(Table $table): Table

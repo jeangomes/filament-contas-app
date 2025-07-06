@@ -18,7 +18,7 @@ class CreateTransaction extends CreateRecord
 
         foreach ($data['transactions'] as $transaction) {
             if ($transaction['description'] === 'Outros') {
-                $transaction['tipo'] = 'pagamento';
+                $transaction['type'] = 'payment';
             }
             $model = static::getModel()::create($transaction);
             $models[] = $model;

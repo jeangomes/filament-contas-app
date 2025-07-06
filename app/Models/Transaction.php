@@ -17,9 +17,8 @@ class Transaction extends Model
         'amount',
         'common_expense',
         'individual_expense',
-        'owner_expense',
         'who_paid',
-        'origin','tipo','category'
+        'origin','type','category'
     ];
 
     protected function casts(): array
@@ -46,9 +45,11 @@ class Transaction extends Model
             if ($creditCardBill) {
                 $creditCardBill->common_amount = $creditCardBill->transactions()
                     ->where('common_expense', '=', 1)
+                    ->where('type','!=', 'pgto_de_fatura')
                     ->sum('amount');
                 $creditCardBill->individual_amount = $creditCardBill->transactions()
                     ->where('individual_expense', '=', 1)
+                    ->where('type','!=', 'pgto_de_fatura')
                     ->sum('amount');
                 $creditCardBill->save();
             }

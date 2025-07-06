@@ -23,6 +23,12 @@ return new class extends Migration
             $table->timestamps();
         });
 
+        Schema::create('expense_categories', function (Blueprint $table) {
+            $table->id();
+            $table->string('description');
+            $table->timestamps();
+        });
+
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('credit_card_bill_id')->index()->nullable();
@@ -38,11 +44,11 @@ return new class extends Migration
 
             $table->boolean('mov_type')->default(0); // 0 para débito/saida, 1 crédito/entrada/recebimento
             $table->enum('status', ['pendente', 'pago', 'vencido'])->default('pendente'); // Status de pagamento
-            $table->string('category')->nullable()->index(); // Categoria da transação (ex: 'aluguel', 'consumo', 'salário', transporte/alimentação)
+            $table->unsignedBigInteger('expense_category_id')->nullable()->index();
             $table->string('origin')->nullable(); // Conta origem (cartão de crédito, conta corrente, etc.)
-            $table->enum('tipo', ['despesa_fixa', 'despesa_variable', 'pagamento', 'pgto_de_fatura'])->default('despesa');
+            $table->enum('type', ['fixed_expense', 'variable_expense', 'payment', 'superfluous', 'pgto_de_fatura'])->default('fixed_expense');
 
-            $table->timestamps(); // Marcas de tempo (created_at e updated_at)
+            $table->timestamps();
         });
     }
 
@@ -52,6 +58,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('transactions');
+        Schema::dropIfExists('expense_categories');
         Schema::dropIfExists('credit_card_bills');
     }
 };

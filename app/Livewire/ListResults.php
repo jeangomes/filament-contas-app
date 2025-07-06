@@ -58,6 +58,7 @@ class ListResults extends Component implements HasForms, HasTable
             ->selectRaw("COALESCE(SUM(CASE WHEN description = 'Naturgy' THEN amount END), 0) AS naturgy")
             ->selectRaw("COALESCE(SUM(CASE WHEN description = 'Claro' THEN amount END), 0) AS claro")
             ->groupByRaw("$dateRef, $dateVcto")
+            ->orderByRaw("$dateVcto desc")
             ->get();
 
         $finalBalances = $this->calculationBalance();
@@ -92,6 +93,7 @@ class ListResults extends Component implements HasForms, HasTable
             ->selectRaw("IF(credit_card_bill_id is not null, DATE_FORMAT(ccb.due_date, '%Y-%m'),  DATE_FORMAT(transaction_date, '%Y-%m')) AS mes_ano")
             ->leftJoin('credit_card_bills as ccb', 'transactions.credit_card_bill_id', '=', 'ccb.id')
             ->where('common_expense','=',1)
+            ->where('type','!=', 'pgto_de_fatura')
             ->groupByRaw('mes_ano, who_paid')
             ->orderByRaw('mes_ano, participant')
             ->get()->toArray();
