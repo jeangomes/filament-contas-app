@@ -24,25 +24,23 @@ return new class extends Migration
         });
 
         Schema::create('transactions', function (Blueprint $table) {
-            $table->id(); // ID único para a transação
+            $table->id();
             $table->unsignedBigInteger('credit_card_bill_id')->index()->nullable();
             $table->foreign('credit_card_bill_id')->references('id')->on('credit_card_bills')->onDelete('cascade');
             $table->date('transaction_date');
-            // due_date - data de vencimento para as contas da casa, e a data de vencimento da fatura, se é tudo do mesmo mes, agrupa pelo mes para fazer o consolidado, do web.php
-            $table->string('description'); // Descrição da transação
-            $table->string('parcelas')->nullable(); // Parcelas (ex: '1/3') - Para transações parceladas
-            $table->decimal('amount', 10, 2); // Valor da transação (com 2 casas decimais)
+            $table->string('description');
+            $table->string('parcelas')->nullable();
+            $table->decimal('amount', 10, 2);
 
-            $table->enum('owner_expense', ['D', 'J'])->nullable();
             $table->enum('who_paid', ['D', 'J'])->nullable();
             $table->boolean('common_expense')->nullable();
             $table->boolean('individual_expense')->nullable();
 
             $table->boolean('mov_type')->default(0); // 0 para débito/saida, 1 crédito/entrada/recebimento
             $table->enum('status', ['pendente', 'pago', 'vencido'])->default('pendente'); // Status de pagamento
-            //$table->string('category')->nullable(); // Categoria da transação (ex: 'aluguel', 'consumo', 'salário', transporte/alimentação)
+            $table->string('category')->nullable()->index(); // Categoria da transação (ex: 'aluguel', 'consumo', 'salário', transporte/alimentação)
             $table->string('origin')->nullable(); // Conta origem (cartão de crédito, conta corrente, etc.)
-            $table->enum('tipo', ['despesa', 'recebimento', 'pagamento'])->default('despesa'); // Tipo da transação
+            $table->enum('tipo', ['despesa_fixa', 'despesa_variable', 'pagamento', 'pgto_de_fatura'])->default('despesa');
 
             $table->timestamps(); // Marcas de tempo (created_at e updated_at)
         });
