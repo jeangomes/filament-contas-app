@@ -54,7 +54,7 @@ class TransactionResource extends Resource
                             self::fieldCommon(),
                             self::fieldIndividual(),
                             self::fieldResponsible(),
-                        ])->cloneable()
+                        ])->cloneable()->addActionLabel('Add transação')
                         ->columns(3),
 
                 ])->columns(1);
@@ -145,12 +145,12 @@ class TransactionResource extends Resource
      */
     public static function fieldResponsible(): Forms\Components\Radio
     {
-        return Forms\Components\Radio::make('responsible_for_expense')->label('Responsável/Devedor')
+        return Forms\Components\Radio::make('responsible_for_expense')
+            ->label('Responsável/Devedor')
             ->options([
                 'D' => 'D',
                 'J' => 'J',
-            ])
-            ->default('J')
+            ])->columnSpan(2)
             ->inline();
     }
 
