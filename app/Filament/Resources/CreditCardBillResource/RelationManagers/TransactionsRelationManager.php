@@ -21,6 +21,11 @@ class TransactionsRelationManager extends RelationManager
     protected static ?string $modelLabel = 'transação';
     protected static ?string $title = 'Transações';
 
+    public function canCreate(): bool
+    {
+       return false;
+    }
+
     public function form(Form $form): Form
     {
         return $form
@@ -110,7 +115,6 @@ class TransactionsRelationManager extends RelationManager
             ->actions([
                 Tables\Actions\ViewAction::make()->hiddenLabel(),
                 Tables\Actions\EditAction::make()->hiddenLabel(),
-                Tables\Actions\DeleteAction::make()->hiddenLabel(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
