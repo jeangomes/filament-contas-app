@@ -3,7 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Transaction;
-use Illuminate\Support\Facades\DB;
+use App\Services\MonthlyBalanceCalculator;
 use Livewire\Component;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -12,11 +12,15 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use Illuminate\Support\Number;
+use Illuminate\Support\Collection;
 
 class ListResults extends Component implements HasForms, HasTable
 {
     use InteractsWithTable;
     use InteractsWithForms;
+
+    // Propriedade para armazenar os resultados processados para o Filament Table
+    public Collection $tableResults;
 
     public function table(Table $table): Table
     {
@@ -46,9 +50,13 @@ class ListResults extends Component implements HasForms, HasTable
 
     public function render()
     {
+        // Chamada única ao serviço para calcular todos os balanços
+        //$calculator = new MonthlyBalanceCalculator();
+        //$finalBalances = $calculator->calculateFinalBalances();
+
         $dateRef = "DATE_FORMAT(DATE_SUB(transaction_date, INTERVAL 1 MONTH), '%Y-%m')";
         $dateVcto = "DATE_FORMAT(transaction_date, '%Y-%m')";
-        $resultados = Transaction::query()->whereNull('credit_card_bill_id')
+        $resultados = Transaction::query()
             ->selectRaw("$dateRef AS mes_ref")
             ->selectRaw("$dateVcto AS mes_vcto")
             ->selectRaw("COALESCE(SUM(CASE WHEN description = 'Aluguel' THEN amount END), 0) AS aluguel")
@@ -57,11 +65,43 @@ class ListResults extends Component implements HasForms, HasTable
             ->selectRaw("COALESCE(SUM(CASE WHEN description = 'LIGHT' THEN amount END), 0) AS light")
             ->selectRaw("COALESCE(SUM(CASE WHEN description = 'Naturgy' THEN amount END), 0) AS naturgy")
             ->selectRaw("COALESCE(SUM(CASE WHEN description = 'Claro' THEN amount END), 0) AS claro")
+            ->whereNull('credit_card_bill_id')
             ->groupByRaw("$dateRef, $dateVcto")
             ->orderByRaw("$dateVcto desc")
             ->get();
 
-        $finalBalances = $this->calculationBalance();
+        // Mapear os resultados para incluir os balanços calculados e totais
+        /*$this->tableResults = $transactionsSummary->map(function ($transactionSummary) use ($finalBalances) {
+            $transactionSummary->amount_home_expenses = $transactionSummary->aluguel + $transactionSummary->condominio + $transactionSummary->eventualidades +
+                $transactionSummary->light + $transactionSummary->naturgy + $transactionSummary->claro;
+
+            // Encontrar o balanço final para este mês e identificar o devedor
+            $balanceEntry = collect($finalBalances)->first(function ($value) use ($transactionSummary) {
+                return $value['month_year'] === $transactionSummary->mes_vcto && $value['balance'] < 0;
+            });
+
+            $transactionSummary->balance = $balanceEntry ? $balanceEntry['balance'] : 0;
+            $transactionSummary->balance_payer = $balanceEntry ? $balanceEntry['participant'] : ''; // Quem é o devedor
+
+            // Opcional: Adicionar o saldo do credor (quem tem o saldo positivo)
+            $creditorEntry = collect($finalBalances)->first(function ($value) use ($transactionSummary) {
+                return $value['month_year'] === $transactionSummary->mes_vcto && $value['balance'] > 0;
+            });
+            $transactionSummary->creditor_balance = $creditorEntry ? $creditorEntry['balance'] : 0;
+            $transactionSummary->creditor_participant = $creditorEntry ? $creditorEntry['participant'] : '';
+
+            // Opcional: Total de despesas comuns para o mês (para referência)
+            $totalCommonForMonthEntry = collect($finalBalances)->first(function ($value) use ($transactionSummary) {
+                return $value['month_year'] === $transactionSummary->mes_vcto;
+            });
+            $transactionSummary->total_common_expenses_calculated = $totalCommonForMonthEntry ? $totalCommonForMonthEntry['share_common'] * count(MonthlyBalanceCalculator::COMMON_EXPENSE_PARTICIPANTS) : 0; //
+
+
+            return $transactionSummary;
+        });
+        dd($this->tableResults);*/
+        $a = new MonthlyBalanceCalculator();
+        $finalBalances = $a->calculateFinalBalances();
         $resultados->map(function ($transaction) use ($resultados, $finalBalances) {
             $transaction->amount_home_expenses = $transaction->aluguel + $transaction->condominio + $transaction->eventualidades +
                 $transaction->light + $transaction->naturgy + $transaction->claro;
@@ -81,66 +121,7 @@ class ListResults extends Component implements HasForms, HasTable
     private function filterBalance($finalBalances, $dueMonth)
     {
         return collect($finalBalances)->first(function ($value) use ($dueMonth) {
-            return $value['mes_ano'] === $dueMonth && $value['balance'] < 0;
+            return $value['month_year'] === $dueMonth && $value['balance'] < 0;
         });
-    }
-
-    private function calculationBalance(): array
-    {
-        $totalPaidCommon = DB::table('transactions')
-            ->selectRaw('who_paid AS participant')
-            ->selectRaw('SUM(transactions.amount) AS total_paid')
-            ->selectRaw("IF(credit_card_bill_id is not null, DATE_FORMAT(ccb.due_date, '%Y-%m'),  DATE_FORMAT(transaction_date, '%Y-%m')) AS mes_ano")
-            ->leftJoin('credit_card_bills as ccb', 'transactions.credit_card_bill_id', '=', 'ccb.id')
-            ->where('common_expense','=',1)
-            ->where('type','!=', 'pgto_de_fatura')
-            ->groupByRaw('mes_ano, who_paid')
-            ->orderByRaw('mes_ano, participant')
-            ->get()->toArray();
-
-        $balancesByMonth = [];
-
-        // Passo 2: Processar os dados brutos
-        foreach ($totalPaidCommon as $entry) {
-            $mesAno = $entry->mes_ano;  // Obtém o mês e ano da transação
-            $participant = $entry->participant;  // Quem pagou
-            $totalPaid = $entry->total_paid;  // Quanto pagou
-
-            if (!isset($balancesByMonth[$mesAno])) {
-                $balancesByMonth[$mesAno] = [
-                    'total_common' => 0, // Total de despesas comuns do mês
-                    'participants' => [], // Lista de participantes e quanto pagaram
-                ];
-            }
-
-            // Soma os valores pagos por todos os participantes no mês
-            $balancesByMonth[$mesAno]['total_common'] += $totalPaid;
-
-            // Armazena quanto cada participante pagou
-            $balancesByMonth[$mesAno]['participants'][$participant] = $totalPaid;
-        }
-
-        // Passo 3: Calcular a divisão dos gastos
-
-        $finalBalances = [];
-
-        foreach ($balancesByMonth as $mesAno => $data) {
-            $totalCommon = $data['total_common']; // Total de gastos comuns do mês
-            $participants = count($data['participants']); // Quantidade de participantes
-            $sharePerParticipant = $totalCommon / $participants; // Quanto cada um deveria pagar
-
-            foreach ($data['participants'] as $participant => $totalPaid) {
-                $balance = $totalPaid - $sharePerParticipant; // Diferença entre o que pagou e o que deveria pagar
-
-                $finalBalances[] = [
-                    'mes_ano' => $mesAno,
-                    'participant' => $participant,
-                    'total_paid' => $totalPaid,
-                    'share' => $sharePerParticipant,
-                    'balance' => $balance,
-                ];
-            }
-        }
-        return $finalBalances;
     }
 }
