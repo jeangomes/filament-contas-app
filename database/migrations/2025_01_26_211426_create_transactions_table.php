@@ -38,6 +38,7 @@ return new class extends Migration
             $table->string('parcelas')->nullable();
             $table->decimal('amount', 10, 2);
 
+            $table->enum('responsible_for_expense', ['D', 'J'])->nullable();
             $table->enum('who_paid', ['D', 'J'])->nullable();
             $table->boolean('common_expense')->nullable();
             $table->boolean('individual_expense')->nullable();
