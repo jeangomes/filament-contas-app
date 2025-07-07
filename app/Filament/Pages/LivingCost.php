@@ -16,6 +16,7 @@ class LivingCost extends Page
 
     protected static string $view = 'filament.pages.living-cost';
     protected static ?string $title = 'Custo de Vida';
+    protected static ?int $navigationSort = 4;
 
     /**
      * @var Collection<int, Transaction>
@@ -43,6 +44,7 @@ class LivingCost extends Page
             ->selectRaw("COALESCE(SUM(CASE WHEN description = 'Claro' THEN amount END), 0) AS claro")
             ->selectRaw("COALESCE(SUM(CASE WHEN description = 'Outros' THEN amount END), 0) AS others")
             ->groupByRaw("$dateRef, $dateVcto")
+            ->orderByRaw("$dateVcto desc")
             ->get();
 
         $this->resultados->map(function ($transaction) {

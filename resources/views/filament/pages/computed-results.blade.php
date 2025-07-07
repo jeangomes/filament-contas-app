@@ -1,6 +1,4 @@
-<div>
-    {{-- A good traveler has no fixed plans and is not intent upon arriving. --}}
-
+<x-filament-panels::page>
     <div class="container mx-auto mt-6 px-4">
         <h2 class="text-2xl font-semibold text-center mb-6">Resumo de Pagamentos das Contas da Casa</h2>
         <div class="overflow-x-auto">
@@ -22,7 +20,7 @@
                 </tr>
                 </thead>
                 <tbody>
-                @foreach($resultados as $resultado)
+                @foreach($tableResults as $resultado)
                     <tr class="border-b {!! $loop->even ? 'my-striped-color' : ''!!}">
                         <td class="border py-1 px-2 text-sm">{{ $resultado->mes_ref }}</td>
                         <td class="border py-1 px-2 text-sm">{{ $resultado->mes_vcto }}</td>
@@ -47,15 +45,15 @@
         <br>
         <table>
             @foreach ($finalBalances as $balance)
-            <tr>
-                <td>
-                    {!! "Mês: {$balance['mes_ano']} -
-                    {$balance['participant']} pagou {$this->formatNumber($balance['total_paid'])}
-                    e deveria pagar {$this->formatNumber($balance['share'])},
-                     saldo: {$this->formatNumber($balance['balance'])}" !!}
-                </td>
-            </tr>
+                <tr>
+                    <td>
+                        {!! "Mês: {$balance['month_year']} -
+                        {$balance['participant']} pagou {$this->formatNumber($balance['total_paid_common'])}
+                        e deveria pagar {$this->formatNumber($balance['share_common'])},
+                         saldo: {$this->formatNumber($balance['balance'])}" !!}
+                    </td>
+                </tr>
             @endforeach
         </table>
     </div>
-</div>
+</x-filament-panels::page>

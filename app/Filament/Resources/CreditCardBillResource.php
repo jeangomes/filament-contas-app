@@ -20,6 +20,7 @@ class CreditCardBillResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static ?string $modelLabel = 'Fatura de cartão';
     protected static ?string $pluralModelLabel = 'Faturas de cartão';
+    protected static ?int $navigationSort = 1;
 
     public static function form(Form $form): Form
     {

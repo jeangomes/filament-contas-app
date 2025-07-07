@@ -21,6 +21,7 @@
                         <th class="border py-1 px-2 text-left text-sm">J <br> NB Comum</th>
                         <th class="border py-1 px-2 text-left text-sm">J <br> NB Individual</th>
                         <th class="border py-1 px-2 text-left text-sm my-bg-primary">J <br> Custo <br> de Vida</th>
+                        <th class="border py-1 px-2 text-left text-sm">Total <br> Comum</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -44,6 +45,7 @@
                             <td class="border py-1 px-2 text-sm">
                                 {{ $this->formatNumber($resultado->living_cost['J']) }}
                             </td>
+                            <td class="border py-1 px-2 text-sm">{{ $this->formatNumber($resultado->amount_home_expenses+$resultado->bill_d?->common_amount+$resultado->bill_j?->common_amount) }}</td>
                         </tr>
                     @endforeach
                     </tbody>

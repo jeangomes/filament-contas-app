@@ -19,6 +19,7 @@ class TransactionResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static ?string $modelLabel = 'Transação/Gasto';
     protected static ?string $pluralModelLabel = 'Transações/Gastos';
+    protected static ?int $navigationSort = 2;
 
     public static function fieldIndividual(): Forms\Components\Radio
     {
