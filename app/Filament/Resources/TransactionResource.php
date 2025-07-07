@@ -53,6 +53,7 @@ class TransactionResource extends Resource
                             self::fieldWhoPaid(),
                             self::fieldCommon(),
                             self::fieldIndividual(),
+                            self::fieldResponsible(),
                         ])->cloneable()
                         ->columns(3),
 
@@ -67,6 +68,7 @@ class TransactionResource extends Resource
                 self::fieldWhoPaid(),
                 self::fieldCommon(),
                 self::fieldIndividual(),
+                self::fieldResponsible(),
             ])
             ->columns(3);
 
@@ -84,6 +86,7 @@ class TransactionResource extends Resource
                 Tables\Columns\TextColumn::make('parcelas')->label('Parcelas'),
                 Tables\Columns\TextColumn::make('amount')->money('BRL')->label('Valor'),
                 Tables\Columns\TextColumn::make('who_paid')->label('Pagador'),
+                Tables\Columns\TextColumn::make('responsible_for_expense')->label('Devedor'),
                 Tables\Columns\IconColumn::make('individual_expense')->label('Individual'),
                 Tables\Columns\IconColumn::make('common_expense')
                     ->label('Em comum')
@@ -96,8 +99,8 @@ class TransactionResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make()->label('Editar'),
-                Tables\Actions\DeleteAction::make()->label('Excluir'),
+                Tables\Actions\EditAction::make()->hiddenLabel(),
+                Tables\Actions\DeleteAction::make()->hiddenLabel(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -135,6 +138,20 @@ class TransactionResource extends Resource
             ->default('J')
             ->inline()
             ->required();
+    }
+
+    /**
+     * @return Forms\Components\Radio
+     */
+    public static function fieldResponsible(): Forms\Components\Radio
+    {
+        return Forms\Components\Radio::make('responsible_for_expense')->label('Responsável/Devedor')
+            ->options([
+                'D' => 'D',
+                'J' => 'J',
+            ])
+            ->default('J')
+            ->inline();
     }
 
     /**

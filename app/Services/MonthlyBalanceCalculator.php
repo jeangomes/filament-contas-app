@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Transaction;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -30,7 +29,7 @@ class MonthlyBalanceCalculator
         $finalBalances = $this->calculateCommonExpenseShare($balancesByMonth);
 
         // 4. Incorporar despesas individuais pagas por outra pessoa (se o campo 'responsible_for_expense' existir)
-        //$finalBalances = $this->incorporateIndividualExpensesPaidByOthers($finalBalances);
+        $finalBalances = $this->incorporateIndividualExpensesPaidByOthers($finalBalances);
 
         return $finalBalances;
     }
@@ -118,7 +117,7 @@ class MonthlyBalanceCalculator
 
     /**
      * Incorpora dívidas de despesas individuais pagas por outros.
-     * Este método assume a existência do campo `responsible_for_expense` na tabela `transactions`.
+     * Assume a existência do campo responsible_for_expense na tabela transactions.
      *
      * @param array $currentBalances
      * @return array
@@ -133,7 +132,7 @@ class MonthlyBalanceCalculator
         $individualDebts = DB::table('transactions')
             ->selectRaw('who_paid AS payer')
             ->selectRaw('responsible_for_expense AS beneficiary')
-            ->selectRaw('SUM(amount) AS total_amount')
+            ->selectRaw('SUM(transactions.amount) AS total_amount')
             ->selectRaw("IF(credit_card_bill_id IS NOT NULL, DATE_FORMAT(ccb.due_date, '%Y-%m'), DATE_FORMAT(transaction_date, '%Y-%m')) AS month_year")
             ->leftJoin('credit_card_bills as ccb', 'transactions.credit_card_bill_id', '=', 'ccb.id')
             ->where('common_expense', false) // Despesa individual

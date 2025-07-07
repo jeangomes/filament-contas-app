@@ -17,7 +17,7 @@ class Transaction extends Model
         'amount',
         'common_expense',
         'individual_expense',
-        'who_paid',
+        'responsible_for_expense','who_paid',
         'origin','type','category'
     ];
 
