@@ -121,6 +121,7 @@ class CreditCardBillResource extends Resource
     {
         return [
             RelationManagers\TransactionsRelationManager::class,
+            RelationManagers\SimpleTransactionsRelationManager::class,
         ];
     }
 
