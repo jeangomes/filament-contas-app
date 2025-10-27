@@ -4,12 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 /**
  * @property-read CreditCardBill $creditCardBill
  */
 class Transaction extends Model
 {
+    use LogsActivity;
+
     protected $fillable = [
         'transaction_date',
         'description',
@@ -29,6 +33,23 @@ class Transaction extends Model
             'individual_expense' => 'boolean',
             'transaction_date' => 'date',
         ];
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->setDescriptionForEvent(fn(string $eventName) => $this->getDescriptionForLog($eventName))
+            ->logOnlyDirty();
+    }
+
+    private function getDescriptionForLog($eventName): string
+    {
+        return match ($eventName) {
+            'updated' => 'Alteração de Transação/Item de Fatura',
+            'created' => 'Inclusão de Transação/Item de Fatura',
+            'deleted' => 'Exclusão de Transação/Item de Fatura',
+            default => $eventName,
+        };
     }
 
     /** @return BelongsTo<CreditCardBill, $this> */
