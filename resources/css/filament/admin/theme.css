@@ -1,6 +1,7 @@
-@import '/vendor/filament/filament/resources/css/theme.css';
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
 
-@config 'tailwind.config.js';
+@source '../../../../app/Filament/**/*';
+@source '../../../../resources/views/filament/**/*';
 
 .fi-ta-cell, .fi-ta-cell div{
     padding-top: 1px !important;
