@@ -1,73 +1,75 @@
 services:
-    laravel.test:
+    # 1. Laravel PHP Application Service
+    app:
         build:
-            context: './vendor/laravel/sail/runtimes/8.4'
+            context: .
             dockerfile: Dockerfile
-            args:
-                WWWGROUP: '${WWWGROUP}'
-        image: 'sail-8.4/app'
-        extra_hosts:
-            - 'host.docker.internal:host-gateway'
-        ports:
-            - '${APP_PORT:-80}:80'
-            - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
-        environment:
-            WWWUSER: '${WWWUSER}'
-            LARAVEL_SAIL: 1
-            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
-            XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
-            IGNITION_LOCAL_SITES_PATH: '${PWD}'
+        image: contas-casinha-app
+        container_name: contas-casinha-app
+        restart: unless-stopped
+        working_dir: /var/www/html
         volumes:
-            - '.:/var/www/html'
+            # Mount the entire current directory to the container's working directory  - ./:/var/www
+            - ./:/var/www/html
         networks:
-            - sail
+            - casinha-network
+
+    # 2. Nginx Web Server Service
+    nginx:
+        image: nginx:alpine
+        container_name: contas-casinha-nginx
+        restart: unless-stopped
+        ports:
+            # Host Port:Container Port
+            - "8000:80"
+        volumes:
+            # Link application code to Nginx  - ./:/var/www
+            - ./:/var/www/html
+            # Custom Nginx configuration file (see step 3)
+            - ./docker/nginx:/etc/nginx/conf.d/
+        networks:
+            - casinha-network
         depends_on:
-            - mysql
-            - redis
-    mysql:
-        image: 'mysql/mysql-server:8.0'
-        ports:
-            - '${FORWARD_DB_PORT:-3306}:3306'
+            - app
+
+    # 3. MySQL Database Service
+    db:
+        image: mysql:8.0
+        container_name: contas-casinha-db
+        restart: unless-stopped
         environment:
-            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
-            MYSQL_ROOT_HOST: '%'
-            MYSQL_DATABASE: '${DB_DATABASE}'
-            MYSQL_USER: '${DB_USERNAME}'
-            MYSQL_PASSWORD: '${DB_PASSWORD}'
-            MYSQL_ALLOW_EMPTY_PASSWORD: 1
+            # Change these values in your .env file as well
+            MYSQL_DATABASE: laravel_db
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_USER: laravel_user
+            MYSQL_PASSWORD: password
         volumes:
-            - 'sail-mysql:/var/lib/mysql'
-            - './vendor/laravel/sail/database/mysql/create-testing-database.sh:/docker-entrypoint-initdb.d/10-create-testing-database.sh'
-        networks:
-            - sail
-        healthcheck:
-            test:
-                - CMD
-                - mysqladmin
-                - ping
-                - '-p${DB_PASSWORD}'
-            retries: 3
-            timeout: 5s
-    redis:
-        image: 'redis:alpine'
+            # Persistent storage for the database data
+            - dbdata:/var/lib/mysql
         ports:
-            - '${FORWARD_REDIS_PORT:-6379}:6379'
-        volumes:
-            - 'sail-redis:/data'
+            # Optional: Expose the DB port to the host for local access (e.g., DB tools)
+            - "3306:3306"
         networks:
-            - sail
-        healthcheck:
-            test:
-                - CMD
-                - redis-cli
-                - ping
-            retries: 3
-            timeout: 5s
+            - casinha-network
+    node:
+      # Usa a imagem Node.js oficial (versão que você precisa)
+      image: node:24-alpine
+      container_name: laravel_node_assets
+      # Define o diretório de trabalho onde o package.json está
+      working_dir: /var/www/html
+      volumes:
+        - .:/var/www/html # Mapeia o diretório raiz do projeto Laravel
+        # Impede que o volume local sobrescreva o node_modules do container
+        - /var/www/html/node_modules
+      # O comando padrão deve ser algo que espere um input (como sleep)
+      # ou pode ser omitido, pois você executará comandos manualmente.
+      command: sleep infinity
+
+# Define the network and persistent volumes
 networks:
-    sail:
+    casinha-network:
         driver: bridge
+
 volumes:
-    sail-mysql:
-        driver: local
-    sail-redis:
+    dbdata:
         driver: local
