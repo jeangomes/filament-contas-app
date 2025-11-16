@@ -17,9 +17,8 @@ class ActivityLog extends Activity
         parent::boot();
 
         static::creating(function ($model) {
-            //$model->causer_id = 2;
-            //$model->ip_address = request()->ip();
-            //$model->user_agent = request()->userAgent();
+            $model->ip_address = request()->ip();
+            $model->user_agent = request()->userAgent();
         });
     }
 
