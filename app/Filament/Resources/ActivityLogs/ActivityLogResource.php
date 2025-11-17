@@ -23,7 +23,7 @@ class ActivityLogResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
-    protected static ?string $recordTitleAttribute = 'description';
+    protected static ?int $navigationSort = 6;
 
     public static function canCreate(): bool
     {

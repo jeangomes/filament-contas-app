@@ -20,6 +20,8 @@ class UserResource extends Resource
     protected static ?string $model = User::class;
     protected static ?string $modelLabel = 'usuário';
 
+    protected static ?int $navigationSort = 5;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     public static function canCreate(): bool
