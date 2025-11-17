@@ -4,8 +4,26 @@ namespace App\Filament\Resources\Transactions\Pages;
 
 use App\Filament\Resources\Transactions\TransactionResource;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Database\Eloquent\Model;
 
 class CreateTransaction extends CreateRecord
 {
     protected static string $resource = TransactionResource::class;
+
+    protected function handleRecordCreation(array $data): Model
+    {
+        //dd($data);
+        $models = [];
+
+        foreach ($data['transactions'] as $transaction) {
+            if ($transaction['description'] === 'Outros') {
+                $transaction['type'] = 'payment';
+            }
+            $model = static::getModel()::create($transaction);
+            $models[] = $model;
+        }
+
+        return $models[0];
+        //return static::getModel()::create($data);
+    }
 }
