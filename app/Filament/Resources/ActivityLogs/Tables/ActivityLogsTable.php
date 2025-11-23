@@ -25,6 +25,7 @@ class ActivityLogsTable
                 TextColumn::make('ip_address')->label('IP'),
                 // ip e navegador
             ])
+            ->paginated([25])
             ->filters([
                 //
             ])
