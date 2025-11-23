@@ -5,6 +5,7 @@ namespace App\Filament\Resources\CreditCardBills\Pages;
 use App\Filament\Resources\CreditCardBills\CreditCardBillResource;
 use Filament\Resources\Pages\CreateRecord;
 use App\Models\CreditCardBill;
+use Illuminate\Database\Eloquent\Model;
 
 class CreateCreditCardBill extends CreateRecord
 {
@@ -19,7 +20,18 @@ class CreateCreditCardBill extends CreateRecord
         return $data;
     }
 
-    private function processarDespesas($texto, $who_paid,  $most_common_expenses): array
+    protected function handleRecordCreation(array $data): Model
+    {
+        $data_insert = [
+            'title_description_owner' => $data['title_description_owner'],
+            'owner_bill' => $data['owner_bill'],
+            'amount' => $data['amount'],
+            'due_date' => $data['due_date'],
+        ];
+        return static::getModel()::create($data_insert);
+    }
+
+    private function processarDespesas($texto, $who_paid, $most_common_expenses): array
     {
         // Quebra o texto em linhas
         $linhas = explode("\n", trim($texto));
@@ -40,7 +52,7 @@ class CreateCreditCardBill extends CreateRecord
                     'individual_expense' => !$default_common_expenses,
                     'common_expense' => $default_common_expenses,
                     //'owner_expense' => 'D',
-                    'who_paid'=> $who_paid
+                    'who_paid' => $who_paid
                 ];
             } else {
                 //echo "Linha não corresponde ao formato: " . $line . "<br>";
@@ -96,7 +108,7 @@ class CreateCreditCardBill extends CreateRecord
                 'amount' => $item['amount'],
                 'individual_expense' => !$default_common_expenses,
                 'common_expense' => $default_common_expenses,
-                'who_paid'=> $who_paid
+                'who_paid' => $who_paid
             ];
         }
 
