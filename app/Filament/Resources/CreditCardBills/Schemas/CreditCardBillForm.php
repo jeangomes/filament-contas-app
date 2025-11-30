@@ -7,6 +7,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Operation;
 
 class CreditCardBillForm
 {
@@ -29,8 +30,10 @@ class CreditCardBillForm
                 DatePicker::make('due_date')->label('Data de vencimento')
                     ->required(),
                 Select::make('most_common_expenses')->label('Em comum por padrão')->required()
+                    ->hiddenOn(Operation::Edit)
                     ->boolean(),
                 Select::make('origin_format')->label('Origem das transações')->required()
+                    ->hiddenOn(Operation::Edit)
                     ->options([
                         'CSV' => 'CSV',
                         'PDF' => 'PDF',
