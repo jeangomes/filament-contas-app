@@ -13,7 +13,7 @@ class BillsSideBySideOverview extends Page
     protected string $view = 'filament.pages.bills-side-by-side-overview';
     protected static ?string $title = 'Faturas Mensais';
     protected static string | UnitEnum | null $navigationGroup = 'Resultados/Relatórios';
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 3;
 
     public ?string $month = null;
 
