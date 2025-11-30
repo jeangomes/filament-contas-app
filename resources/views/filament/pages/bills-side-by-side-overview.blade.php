@@ -20,7 +20,7 @@
 
         {{-- Fatura D --}}
         <x-filament::section>
-            <x-slot name="heading">Fatura de D</x-slot>
+            <x-slot name="heading">Fatura de D - Vencimento: {{$billD?->due_date->format('d/m/Y')}}</x-slot>
 
             @if($billD)
                 <div class="space-y-2">
@@ -62,7 +62,7 @@
 
         {{-- Fatura J --}}
         <x-filament::section>
-            <x-slot name="heading">Fatura de J</x-slot>
+            <x-slot name="heading">Fatura de J  - Vencimento: {{$billJ?->due_date->format('d/m/Y')}}</x-slot>
 
             @if($billJ)
                 <div class="space-y-2">

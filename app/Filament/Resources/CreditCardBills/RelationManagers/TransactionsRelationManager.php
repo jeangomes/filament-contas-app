@@ -102,7 +102,7 @@ class TransactionsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table->recordUrl(null)->recordAction(null)
-            ->recordClasses(fn (Transaction $record) => match ($record->individual_expense) {
+            ->recordClasses(fn(Transaction $record) => match ($record->individual_expense) {
                 true => 'my-bg-primary',
                 false => '',
             })
@@ -116,7 +116,7 @@ class TransactionsRelationManager extends RelationManager
                     ->summarize(Count::make()),
                 TextColumn::make('parcelas'),
                 TextColumn::make('amount')->money('BRL')->label('Valor')
-                    ->summarize(Sum::make()->query(fn (QueryBuilder $query) => $query->where('type','!=', 'pgto_de_fatura'))),
+                    ->summarize(Sum::make()->query(fn(QueryBuilder $query) => $query->where('type', '!=', 'pgto_de_fatura'))->money('BRL')),
                 ToggleColumn::make('individual_expense')
                     ->label('Gasto Individual')
                     ->beforeStateUpdated(function ($record, $state) {
@@ -127,33 +127,40 @@ class TransactionsRelationManager extends RelationManager
                     ->afterStateUpdated(function ($record, $state) {
                         // Runs after the state is saved to the database.
                     })
-                    ->summarize(
-                        Count::make()->query(fn (QueryBuilder $query) => $query->where('individual_expense', true)),
-                    ),
+                    ->summarize([
+                        Count::make()->query(fn(QueryBuilder $query) => $query->where('individual_expense', true)),
+                        Summarizer::make()
+                            ->label('Total Individual')
+                            ->using(fn(QueryBuilder $query): string => $query
+                                ->where('individual_expense', true)
+                                ->where('type', '!=', 'pgto_de_fatura')
+                                ->sum('amount'))
+                            ->money('BRL'),
+                    ]),
                 IconColumn::make('common_expense')
                     ->label('Gasto em comum')
                     ->boolean()
                     ->trueIcon('heroicon-o-check-badge')
                     ->falseIcon('heroicon-o-x-mark')
                     ->summarize([
-                        Count::make()->query(fn (QueryBuilder $query) => $query->where('common_expense', true)),
+                        Count::make()->query(fn(QueryBuilder $query) => $query->where('common_expense', true)),
                         Summarizer::make()
                             ->label('Total comum')
-                            ->using(fn (QueryBuilder $query): string => $query
+                            ->using(fn(QueryBuilder $query): string => $query
                                 ->where('common_expense', true)
-                                ->where('type','!=', 'pgto_de_fatura')
+                                ->where('type', '!=', 'pgto_de_fatura')
                                 ->sum('amount'))
                             ->money('BRL'),
                         Summarizer::make()
                             ->label('Divisão por 2')
-                            ->using(fn (QueryBuilder $query) => $query->select(DB::raw('sum(amount) / 2 as aggregate'))
+                            ->using(fn(QueryBuilder $query) => $query->select(DB::raw('sum(amount) / 2 as aggregate'))
                                 ->where('common_expense', true)
-                                ->where('type','!=', 'pgto_de_fatura')
+                                ->where('type', '!=', 'pgto_de_fatura')
                                 ->value('aggregate'))
                             ->money('BRL')
                     ]),
             ])
-            ->defaultSort(fn ($query) => $query->orderBy('transaction_date', 'asc')->orderBy('id', 'asc'))
+            ->defaultSort(fn($query) => $query->orderBy('transaction_date', 'asc')->orderBy('id', 'asc'))
             ->filters([
                 //
             ])
