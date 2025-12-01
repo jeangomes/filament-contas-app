@@ -28,7 +28,7 @@ class AdminPanelProvider extends PanelProvider
             ->path('/')
             ->login()
             ->brandName('Contas Casinha V2')
-            ->sidebarWidth('16rem')
+            ->sidebarWidth('14rem')
             ->sidebarCollapsibleOnDesktop()
             ->colors([
                 'primary' => Color::Amber,
