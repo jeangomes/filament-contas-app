@@ -22,6 +22,7 @@ class CreditCardBill extends Model
         'observation',
         'due_date',
         'amount',
+        'csv_file',
     ];
 
     protected function casts(): array
