@@ -52,7 +52,7 @@ class CreateCreditCardBill extends CreateRecord
         }
 
         $default_common_expenses = (bool)$most_common_expenses;
-        //dd('tratar parcelas via regex, usar os campos sugeridos pelo gemini, usar autoclassificação para os lançamentos frequentes como mundial, sacolão, mantiqueira, academia ');
+
         $resultado = [];
         foreach ($data as $item) {
             $resultado[] = [

@@ -15,13 +15,11 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use UnitEnum;
 use App\Models\MonthlySummary;
 use Filament\Actions\Action;
-use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Number;
 
@@ -50,7 +48,7 @@ class MonthlySummaryPage extends Page implements HasTable
                 ->label('Calcular Mês')
                 ->icon('heroicon-o-calculator')
                 ->color('primary')
-                ->form([
+                ->schema([
                     Select::make('reference_month')
                         ->label('Mês de Referência')
                         ->options($this->getMonthOptions())
@@ -146,15 +144,15 @@ class MonthlySummaryPage extends Page implements HasTable
                     ->color('gray'),
 
                 TextColumn::make('total_home_expenses')
-                    ->label('Despesas Casa')
+                    ->label('Despesas Casa')->money('BRL')
                     ->sortable(),
 
                 TextColumn::make('d_credit_card_total')
-                    ->label('Cartão D')
+                    ->label('Cartão D')->money('BRL')
                     ->color('info'),
 
                 TextColumn::make('j_credit_card_total')
-                    ->label('Cartão J')
+                    ->label('Cartão J')->money('BRL')
                     ->color('info'),
 
                 TextColumn::make('balance_description')
@@ -165,11 +163,11 @@ class MonthlySummaryPage extends Page implements HasTable
                     ),
 
                 TextColumn::make('d_living_cost')
-                    ->label('Custo Vida D')
+                    ->label('Custo Vida D')->money('BRL')
                     ->color('success'),
 
                 TextColumn::make('j_living_cost')
-                    ->label('Custo Vida J')
+                    ->label('Custo Vida J')->money('BRL')
                     ->color('success'),
 
                 TextColumn::make('calculated_at')
@@ -178,9 +176,9 @@ class MonthlySummaryPage extends Page implements HasTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->actions([
+            ->recordActions([
                 ViewAction::make()
-                    ->form([
+                    ->schema([
                         // Despesas da Casa
                         Section::make('Despesas da Casa')
                             ->schema([

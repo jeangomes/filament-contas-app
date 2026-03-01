@@ -22,10 +22,14 @@ class ComputedResults extends Page
     public Collection $tableResults;
     public array $finalBalances;
 
-    public function mount(): void
+    public function mount(MonthlyBalanceCalculator $calculator): void
     {
-        $calculator = new MonthlyBalanceCalculator();
-        $finalBalances = $calculator->calculateFinalBalances();
+        $rawBalances = $calculator->calculateFinalBalances();
+        $balancesByMonth = collect($rawBalances)->groupBy('month_year');
+
+
+        //$calculator = new MonthlyBalanceCalculator();
+        //$finalBalances = $calculator->calculateFinalBalances();
 
         $dateRef = "DATE_FORMAT(DATE_SUB(transaction_date, INTERVAL 1 MONTH), '%Y-%m')";
         $dateVcto = "DATE_FORMAT(transaction_date, '%Y-%m')";
@@ -44,8 +48,40 @@ class ComputedResults extends Page
             ->orderByRaw("$dateVcto desc")
             ->get();
 
+        $this->tableResults = $transactionsSummary->map(function ($summary) use ($balancesByMonth) {
+            // Cálculo do total de despesas da casa (Hardcoded na query acima)
+            $summary->amount_home_expenses =
+                $summary->aluguel +
+                $summary->condominio +
+                $summary->eventualidades +
+                $summary->light +
+                $summary->naturgy +
+                $summary->claro;
+
+            // Buscar dados do balanço para este mês específico
+            /** @var Collection $monthBalances */
+            $monthBalances = $balancesByMonth->get($summary->mes_vcto);
+
+            // Inicializar valores padrão
+            $summary->balance = 0;
+            $summary->balance_payer = 'Ninguém'; // Ou string vazia
+
+            if ($monthBalances) {
+                // Encontrar quem ficou com saldo NEGATIVO (quem deve pagar a diferença)
+                // Assumindo que o cálculo gera saldo negativo para quem pagou MENOS do que devia
+                $debtor = $monthBalances->firstWhere('balance', '<', 0);
+
+                if ($debtor) {
+                    $summary->balance = $debtor['balance'];
+                    $summary->balance_payer = $debtor['participant'];
+                }
+            }
+
+            return $summary;
+        });
+
         // Mapear os resultados para incluir os balanços calculados e totais
-        $this->tableResults = $transactionsSummary->map(function ($transactionSummary) use ($finalBalances) {
+        /*$this->tableResults = $transactionsSummary->map(function ($transactionSummary) use ($finalBalances) {
             $transactionSummary->amount_home_expenses = $transactionSummary->aluguel + $transactionSummary->condominio + $transactionSummary->eventualidades +
                 $transactionSummary->light + $transactionSummary->naturgy + $transactionSummary->claro;
 
@@ -55,7 +91,7 @@ class ComputedResults extends Page
             });
 
             $transactionSummary->balance = $balanceEntry ? $balanceEntry['balance'] : 0;
-            $transactionSummary->balance_payer = $balanceEntry ? $balanceEntry['participant'] : ''; // Quem é o devedor
+            $transactionSummary->balance_payer = $balanceEntry ? $balanceEntry['participant'] : '';*/ // Quem é o devedor
 
             // Opcional: Adicionar o saldo do credor (quem tem o saldo positivo)
             /*$creditorEntry = collect($finalBalances)->first(function ($value) use ($transactionSummary) {
@@ -71,10 +107,10 @@ class ComputedResults extends Page
             $transactionSummary->total_common_expenses_calculated = $totalCommonForMonthEntry ? $totalCommonForMonthEntry['share_common'] * count(MonthlyBalanceCalculator::COMMON_EXPENSE_PARTICIPANTS) : 0;*/
 
 
-            return $transactionSummary;
-        });
+            //return $transactionSummary;
+        //});
 
-        $this->finalBalances = $finalBalances;
+        $this->finalBalances = $rawBalances;
     }
 
     public function formatNumber($value): false|string
