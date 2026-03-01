@@ -25,12 +25,19 @@ class DatabaseSeeder extends Seeder
 //        ]);
 
         // Últimos 4 meses
-        $qtd_month = 1;
+        $qtd_month = 6;
         $months = collect(range(0, $qtd_month-1))->map(function ($i) {
             return now()->subMonths($i+2)->startOfMonth();
         });
         foreach ($months as $month) {
-
+            Transaction::factory()->create([
+                'transaction_date' => $month,
+                'description' => 'Aluguel',
+                'who_paid' => 'J',
+                'common_expense' => true,
+                'individual_expense' => false,
+                'amount' => 1200
+            ]);
             foreach (['D', 'J'] as $owner) {
 
                 // Criar fatura do mês para o dono
@@ -42,7 +49,7 @@ class DatabaseSeeder extends Seeder
 
                 // Criar itens de fatura (5 a 10 compras)
                 $transactions = Transaction::factory()
-                    ->count(rand(3, 6))
+                    ->count(rand(3, 3))
                     ->make()
                     ->each(function ($item) use ($bill, $owner) {
 
@@ -50,7 +57,7 @@ class DatabaseSeeder extends Seeder
                         $item->who_paid = $owner;
 
                         // 35% das despesas serão marcadas como comuns
-                        $isCommon = fake()->boolean(35);
+                        $isCommon = fake()->boolean(50);
 
                         $item->common_expense = $isCommon;
                         $item->individual_expense = !$isCommon;
