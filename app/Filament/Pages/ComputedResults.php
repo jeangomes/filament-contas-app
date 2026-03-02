@@ -28,9 +28,6 @@ class ComputedResults extends Page
         $balancesByMonth = collect($rawBalances)->groupBy('month_year');
 
 
-        //$calculator = new MonthlyBalanceCalculator();
-        //$finalBalances = $calculator->calculateFinalBalances();
-
         $dateRef = "DATE_FORMAT(DATE_SUB(transaction_date, INTERVAL 1 MONTH), '%Y-%m')";
         $dateVcto = "DATE_FORMAT(transaction_date, '%Y-%m')";
         $transactionsSummary = Transaction::query()
