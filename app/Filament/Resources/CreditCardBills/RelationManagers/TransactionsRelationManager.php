@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\CreditCardBills\RelationManagers;
 
+use App\Filament\Resources\CreditCardBills\Widgets\TransactionsByCategory;
 use App\Filament\Resources\Transactions\Schemas\TransactionForm;
 use App\Models\Transaction;
 use Filament\Actions\BulkActionGroup;
@@ -16,6 +17,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\SelectColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
@@ -114,11 +116,17 @@ class TransactionsRelationManager extends RelationManager
                 TextColumn::make('description')
                     ->label('Descrição')
                     ->summarize(Count::make()),
+                //
+                SelectColumn::make('expense_category_id')->label('Categoria')
+                    ->disabled(function (Transaction $record) {
+                        return $record->description === 'Pagamento recebido';
+                    })
+                    ->optionsRelationship(name: 'expenseCategory', titleAttribute: 'description'),
                 TextColumn::make('parcelas'),
                 TextColumn::make('amount')->money('BRL')->label('Valor')
                     ->summarize(Sum::make()->query(fn(QueryBuilder $query) => $query->where('type', '!=', 'pgto_de_fatura'))->money('BRL')),
                 ToggleColumn::make('individual_expense')
-                    ->label('Gasto Individual')
+                    ->label('Individual')
                     ->beforeStateUpdated(function ($record, $state) {
                         //dd($record, $state);
                         $record->common_expense = !$state;
@@ -138,7 +146,7 @@ class TransactionsRelationManager extends RelationManager
                             ->money('BRL'),
                     ]),
                 IconColumn::make('common_expense')
-                    ->label('Gasto em comum')
+                    ->label('Em comum')
                     ->boolean()
                     ->trueIcon('heroicon-o-check-badge')
                     ->falseIcon('heroicon-o-x-mark')

@@ -59,7 +59,7 @@ class CreateCreditCardBill extends CreateRecord
                 'transaction_date' => $item['date'],
                 'description' => $item['title'],
                 //'parcelas' => $matches[3] ?? null, // Parcelas (ex.: "1/3"), se existirem
-                'amount' => $item['amount'],
+                'amount' => $this->normalizarValor($item['amount']),
                 'individual_expense' => !$default_common_expenses,
                 'common_expense' => $default_common_expenses,
                 'who_paid' => $who_paid
@@ -67,5 +67,33 @@ class CreateCreditCardBill extends CreateRecord
         }
 
         return $resultado;
+    }
+
+    private function normalizarValor(string $bruto): string
+    {
+        $bruto = trim($bruto);
+        $negativo = str_starts_with($bruto, '-'); // cobre "- 2.825,51"
+
+        // mantém só dígitos e separadores
+        $valor = preg_replace('/[^\d.,]/', '', $bruto);
+
+        $ultimaVirgula = strrpos($valor, ',');
+        $ultimoPonto   = strrpos($valor, '.');
+
+        if ($ultimaVirgula !== false && $ultimoPonto !== false) {
+            if ($ultimaVirgula > $ultimoPonto) {
+                // BR: 2.825,51 → ponto é milhar, vírgula é decimal
+                $valor = str_replace('.', '', $valor);
+                $valor = str_replace(',', '.', $valor);
+            } else {
+                // US com milhar: 2,825.51 → vírgula é milhar
+                $valor = str_replace(',', '', $valor);
+            }
+        } elseif ($ultimaVirgula !== false) {
+            $valor = str_replace(',', '.', $valor); // só vírgula: decimal BR
+        }
+        // só ponto (ou nenhum): já está no formato do MySQL
+
+        return ($negativo ? '-' : '') . $valor; // ex.: "-2825.51"
     }
 }

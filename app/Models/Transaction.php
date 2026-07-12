@@ -60,6 +60,12 @@ class Transaction extends Model
         return $this->belongsTo(CreditCardBill::class);
     }
 
+    /** @return BelongsTo<ExpenseCategory, $this> */
+    public function expenseCategory(): BelongsTo
+    {
+        return $this->belongsTo(ExpenseCategory::class);
+    }
+
     protected static function booted(): void
     {
         static::updated(function (Transaction $transaction) {
