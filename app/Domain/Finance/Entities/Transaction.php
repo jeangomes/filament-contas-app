@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Domain\Finance\Entities;
 
 use App\Domain\Finance\Enums\ExpenseScope;
+use App\Domain\Finance\Enums\Participant;
+use App\Domain\Finance\Enums\TransactionType;
 use App\Domain\Finance\ValueObjects\Money;
+use App\Domain\Finance\ValueObjects\ReferenceMonth;
 use DateTimeImmutable;
 
 readonly class Transaction
@@ -14,29 +17,20 @@ readonly class Transaction
         private DateTimeImmutable $date,
         private string            $description,
         private Money             $amount,
-        private string            $whoPaid,
+        private Participant       $whoPaid,
         private ExpenseScope      $scope,
-        private string|null       $responsible, // Quem deveria pagar
-        private bool|null         $isShared,       // É despesa comum?
-
+        private ?Participant      $responsible = null, // Quem deveria pagar
+        private TransactionType   $type = TransactionType::FixedExpense,
     ) {}
 
-    // Getters
-    public function getAmount(): Money { return $this->amount; }
-    public function getResponsibleId(): string { return $this->responsible; }
-    public function isShared(): bool { return $this->isShared; }
-
-    // Regra de Negócio na Entidade: É uma dívida individual cruzada?
-    // Ex: "D" pagou, mas a conta era do "J" e não é compartilhada.
-    public function isCrossDebt(): bool
-    {
-        return !$this->isShared && ($this->whoPaid !== $this->responsible);
-    }
-
-    ///
     public function date(): DateTimeImmutable
     {
         return $this->date;
+    }
+
+    public function referenceMonth(): ReferenceMonth
+    {
+        return ReferenceMonth::fromDate($this->date);
     }
 
     public function description(): string
@@ -49,14 +43,24 @@ readonly class Transaction
         return $this->amount;
     }
 
-    public function whoPaid(): string
+    public function whoPaid(): Participant
     {
         return $this->whoPaid;
+    }
+
+    public function responsible(): ?Participant
+    {
+        return $this->responsible;
     }
 
     public function tipo(): ExpenseScope
     {
         return $this->scope;
+    }
+
+    public function type(): TransactionType
+    {
+        return $this->type;
     }
 
     /**
@@ -75,5 +79,21 @@ readonly class Transaction
     public function ehDespesaIndividual(): bool
     {
         return ! $this->scope->ehComum();
+    }
+
+    public function contaParaBalanco(): bool
+    {
+        return $this->type->contaParaBalanco();
+    }
+
+    /**
+     * Regra de Negócio na Entidade: É uma dívida individual cruzada?
+     * Ex: "D" pagou, mas a conta era do "J" e não é compartilhada.
+     */
+    public function isCrossDebt(): bool
+    {
+        return $this->ehDespesaIndividual()
+            && $this->responsible !== null
+            && $this->whoPaid !== $this->responsible;
     }
 }

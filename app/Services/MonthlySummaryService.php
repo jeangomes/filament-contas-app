@@ -174,28 +174,27 @@ class MonthlySummaryService
     }
 
     /**
-     * Calcula saldos usando o MonthlyBalanceCalculator existente
+     * Apura o acerto do mês: quem paga a diferença, e quanto.
+     *
+     * A regra vive no domínio (CalculadoraDeSaldoMensal); aqui só se traduz
+     * o Acerto para o formato que calculateAndPersistSummary() grava.
+     *
+     * @return array{difference: float, payer: string|null}
      */
     private function calculateBalances(string $month): array
     {
-        $finalBalances = $this->balanceCalculator->calculateFinalBalances();
+        $acertos = $this->balanceCalculator->saldoDoMes($month)->acertos();
 
-        $monthBalances = collect($finalBalances)->where('month_year', $month);
-
-        if ($monthBalances->isEmpty()) {
+        if ($acertos === []) {
             return ['difference' => 0, 'payer' => null];
         }
 
-        // Encontrar quem deve (saldo negativo)
-        $debtor = $monthBalances->where('balance', '<', 0)->first();
-
-        if (!$debtor) {
-            return ['difference' => 0, 'payer' => null];
-        }
+        $acerto = $acertos[0];
 
         return [
-            'difference' => $debtor['balance'],
-            'payer' => $debtor['participant']
+            // Valor sempre positivo: quem paga é identificado em 'payer'.
+            'difference' => (float) $acerto->valor->paraDecimal(),
+            'payer' => $acerto->paga->value,
         ];
     }
 

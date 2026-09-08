@@ -4,6 +4,7 @@ namespace Tests\Infra\Csv;
 
 use App\Domain\Finance\Entities\Transaction;
 use App\Domain\Finance\Enums\ExpenseScope;
+use App\Domain\Finance\Enums\Participant;
 use App\Infra\Csv\LeitorDeFaturaCsv;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -33,7 +34,7 @@ final class LeitorDeFaturaCsvTest extends TestCase
             . "\n" // linha em branco final não deve quebrar
         );
 
-        $lancamentos = $this->leitor('J', ExpenseScope::Comum)->obter();
+        $lancamentos = $this->leitor(Participant::J, ExpenseScope::Comum)->obter();
 
         $this->assertCount(3, $lancamentos);
         $this->assertContainsOnlyInstancesOf(Transaction::class, $lancamentos);
@@ -49,12 +50,12 @@ final class LeitorDeFaturaCsvTest extends TestCase
             . "2026-06-08,Sorveteria Alex,\"43,00\"\n"
         );
 
-        [$lancamento] = $this->leitor('M', ExpenseScope::Individual)->obter();
+        [$lancamento] = $this->leitor(Participant::D, ExpenseScope::Individual)->obter();
 
         $this->assertSame('2026-06-08', $lancamento->date()->format('Y-m-d'));
         $this->assertSame('Sorveteria Alex', $lancamento->description());
         $this->assertSame(4300, $lancamento->amount()->centavos());
-        $this->assertSame('M', $lancamento->whoPaid());
+        $this->assertSame(Participant::D, $lancamento->whoPaid());
         $this->assertTrue($lancamento->ehDespesaIndividual());
     }
 
@@ -66,7 +67,7 @@ final class LeitorDeFaturaCsvTest extends TestCase
             . "2026-06-12,\"IOF de \"\"Paddle.Net* Runcloudio\"\"\",\"1,67\"\n"
         );
 
-        [$lancamento] = $this->leitor('J', ExpenseScope::Comum)->obter();
+        [$lancamento] = $this->leitor(Participant::J, ExpenseScope::Comum)->obter();
 
         $this->assertSame('IOF de "Paddle.Net* Runcloudio"', $lancamento->description());
     }
@@ -79,7 +80,7 @@ final class LeitorDeFaturaCsvTest extends TestCase
             . "2026-06-09,Pagamento recebido,\"- 2.825,51\"\n"
         );
 
-        [$lancamento] = $this->leitor('J', ExpenseScope::Comum)->obter();
+        [$lancamento] = $this->leitor(Participant::J, ExpenseScope::Comum)->obter();
 
         $this->assertTrue($lancamento->ehCredito());
         $this->assertSame(-282551, $lancamento->amount()->centavos());
@@ -90,7 +91,7 @@ final class LeitorDeFaturaCsvTest extends TestCase
         file_put_contents($this->arquivo, $conteudo);
     }
 
-    private function leitor(string $quemPagou, ExpenseScope $tipo): LeitorDeFaturaCsv
+    private function leitor(Participant $quemPagou, ExpenseScope $tipo): LeitorDeFaturaCsv
     {
         return new LeitorDeFaturaCsv($this->arquivo, $quemPagou, $tipo);
     }

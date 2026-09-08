@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Domain\Finance\Repositories\RepositorioDeLancamentos;
+use App\Infra\Eloquent\RepositorioDeLancamentosEloquent;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\ServiceProvider;
 
@@ -12,6 +14,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind(RepositorioDeLancamentos::class, RepositorioDeLancamentosEloquent::class);
+
         if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
             $this->app->register(TelescopeServiceProvider::class);

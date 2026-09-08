@@ -2,173 +2,87 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
+use App\Domain\Finance\Enums\Participant;
+use App\Domain\Finance\Repositories\RepositorioDeLancamentos;
+use App\Domain\Finance\Services\CalculadoraDeSaldoMensal;
+use App\Domain\Finance\ValueObjects\Money;
+use App\Domain\Finance\ValueObjects\MonthlyBalance;
+use App\Domain\Finance\ValueObjects\ReferenceMonth;
 
+/**
+ * Relatório histórico de saldos: percorre todos os meses com lançamento e
+ * apura o saldo de cada um.
+ *
+ * A regra de negócio em si vive em {@see CalculadoraDeSaldoMensal}; aqui só
+ * sobra a orquestração e a montagem do formato de array que as páginas
+ * legadas (ComputedResults) já consomem.
+ */
 class MonthlyBalanceCalculator
 {
-
-    // Define os participantes fixos que compartilham despesas comuns
-    // Considerar tornar isso configurável (ex: via um .env ou tabela de configuração)
-    const COMMON_EXPENSE_PARTICIPANTS = ['D', 'J'];
+    public function __construct(
+        private readonly RepositorioDeLancamentos $repositorio,
+        private readonly CalculadoraDeSaldoMensal $calculadora = new CalculadoraDeSaldoMensal(),
+    ) {
+    }
 
     /**
-     * Calcula os saldos mensais para despesas comuns e individuais.
-     *
-     * @return array
+     * @return list<array{month_year: string, participant: string, total_paid_common: float, share_common: float, balance: float}>
      */
     public function calculateFinalBalances(): array
     {
-        // 1. Obter despesas comuns pagas por cada participante no mês
-        $totalPaidCommon = $this->getCommonExpensesPaidByParticipants();
+        $participantes = Participant::cases();
+        $balances = [];
 
-        // 2. Processar os dados brutos de despesas comuns
-        $balancesByMonth = $this->processCommonExpenseData($totalPaidCommon);
+        foreach ($this->repositorio->competenciasDisponiveis() as $mes) {
+            $saldoMensal = $this->calculadora->calcular(
+                $mes,
+                $this->repositorio->paraCompetencia($mes),
+                $participantes,
+            );
 
-        // 3. Calcular a divisão dos gastos comuns
-        $finalBalances = $this->calculateCommonExpenseShare($balancesByMonth);
+            foreach ($participantes as $participante) {
+                // O relatório histórico sempre somou ao "total pago" o que a
+                // pessoa adiantou de despesa individual do outro, para a linha
+                // exibida fechar (pagou X - cota Y = saldo Z). O domínio mantém
+                // os dois conceitos separados; a soma acontece só aqui.
+                $totalPago = $saldoMensal->totalPagoComumDe($participante);
+                $adiantado = $saldoMensal->ajusteDeDividaCruzadaDe($participante);
 
-        // 4. Incorporar despesas individuais pagas por outra pessoa (se o campo 'responsible_for_expense' existir)
-        $finalBalances = $this->incorporateIndividualExpensesPaidByOthers($finalBalances);
-
-        return $finalBalances;
-    }
-
-    /**
-     * Busca o total de despesas comuns pagas por cada participante por mês.
-     *
-     * @return Collection
-     */
-    private function getCommonExpensesPaidByParticipants(): Collection
-    {
-        // Usar DB::raw() para as funções de data diretamente no SELECT
-        $dateVcto = "IF(credit_card_bill_id IS NOT NULL, DATE_FORMAT(ccb.due_date, '%Y-%m'), DATE_FORMAT(transaction_date, '%Y-%m'))";
-
-        return DB::table('transactions')
-            ->selectRaw('who_paid AS participant')
-            ->selectRaw('SUM(transactions.amount) AS total_paid')
-            ->selectRaw("$dateVcto AS month_year")
-            ->leftJoin('credit_card_bills as ccb', 'transactions.credit_card_bill_id', '=', 'ccb.id')
-            ->where('common_expense', true)
-            ->where('type', '!=', 'pgto_de_fatura')
-            ->groupByRaw('month_year, who_paid')
-            ->orderByRaw('month_year, participant')
-            ->get();
-    }
-
-    /**
-     * Processa os dados brutos de despesas comuns para organizar por mês e participante.
-     *
-     * @param Collection $totalPaidCommon
-     * @return array
-     */
-    private function processCommonExpenseData(Collection $totalPaidCommon): array
-    {
-        $balancesByMonth = [];
-        foreach ($totalPaidCommon as $entry) {
-            $monthYear = $entry->month_year;
-            $participant = $entry->participant;
-            $totalPaid = $entry->total_paid;
-
-            if (!isset($balancesByMonth[$monthYear])) {
-                $balancesByMonth[$monthYear] = [
-                    'total_common' => 0,
-                    'participants_paid_in_month' => [],
-                ];
-            }
-
-            $balancesByMonth[$monthYear]['total_common'] += $totalPaid;
-            $balancesByMonth[$monthYear]['participants_paid_in_month'][$participant] = $totalPaid;
-        }
-        return $balancesByMonth;
-    }
-
-    /**
-     * Calcula a divisão dos gastos comuns e o saldo inicial para cada participante.
-     *
-     * @param array $balancesByMonth
-     * @return array
-     */
-    private function calculateCommonExpenseShare(array $balancesByMonth): array
-    {
-        $finalBalances = [];
-        $numberOfCommonParticipants = count(self::COMMON_EXPENSE_PARTICIPANTS);
-
-        foreach ($balancesByMonth as $monthYear => $data) {
-            $totalCommon = $data['total_common'];
-            $sharePerParticipant = $totalCommon / $numberOfCommonParticipants;
-
-            foreach (self::COMMON_EXPENSE_PARTICIPANTS as $participant) {
-                $totalPaid = $data['participants_paid_in_month'][$participant] ?? 0;
-
-                $balance = $totalPaid - $sharePerParticipant;
-
-                $finalBalances[] = [
-                    'month_year' => $monthYear, // Renomeado mes_ano para month_year
-                    'participant' => $participant,
-                    'total_paid_common' => $totalPaid, // Mais específico
-                    'share_common' => $sharePerParticipant, // Mais específico
-                    'balance' => $balance,
+                $balances[] = [
+                    'month_year' => $mes->chave(),
+                    'participant' => $participante->value,
+                    'total_paid_common' => $this->paraFloat(
+                        $adiantado->ehPositivo() ? $totalPago->somar($adiantado) : $totalPago,
+                    ),
+                    'share_common' => $this->paraFloat($saldoMensal->cotaComumDe($participante)),
+                    'balance' => $this->paraFloat($saldoMensal->saldoDe($participante)),
                 ];
             }
         }
-        return $finalBalances;
+
+        return $balances;
     }
 
     /**
-     * Incorpora dívidas de despesas individuais pagas por outros.
-     * Assume a existência do campo responsible_for_expense na tabela transactions.
-     *
-     * @param array $currentBalances
-     * @return array
+     * Apura um único mês, sem varrer o histórico inteiro.
      */
-    private function incorporateIndividualExpensesPaidByOthers(array $currentBalances): array
+    public function saldoDoMes(string $chaveDoMes): MonthlyBalance
     {
-        // Verifica se a coluna 'responsible_for_expense' existe antes de tentar usá-la
-        if (!DB::getSchemaBuilder()->hasColumn('transactions', 'responsible_for_expense')) {
-            return $currentBalances; // Se não existe, retorna os balanços atuais sem alterações
-        }
+        $mes = ReferenceMonth::fromString($chaveDoMes);
 
-        $individualDebts = DB::table('transactions')
-            ->selectRaw('who_paid AS payer')
-            ->selectRaw('responsible_for_expense AS beneficiary')
-            ->selectRaw('SUM(transactions.amount) AS total_amount')
-            ->selectRaw("IF(credit_card_bill_id IS NOT NULL, DATE_FORMAT(ccb.due_date, '%Y-%m'), DATE_FORMAT(transaction_date, '%Y-%m')) AS month_year")
-            ->leftJoin('credit_card_bills as ccb', 'transactions.credit_card_bill_id', '=', 'ccb.id')
-            ->where('common_expense', false) // Despesa individual
-            ->whereColumn('who_paid', '!=', 'responsible_for_expense') // Pago por quem não é o responsável
-            ->where('type', '!=', 'pgto_de_fatura')
-            ->groupByRaw('month_year, payer, beneficiary')
-            ->get();
-
-        $updatedBalances = collect($currentBalances);
-
-        foreach ($individualDebts as $debt) {
-            $monthYear = $debt->month_year;
-            $payer = $debt->payer;
-            $beneficiary = $debt->beneficiary;
-            $amount = $debt->total_amount;
-
-            // Ajustar o saldo do pagador (quem pagou)
-            $updatedBalances = $updatedBalances->map(function ($item) use ($monthYear, $payer, $amount) {
-                if ($item['month_year'] === $monthYear && $item['participant'] === $payer) {
-                    $item['balance'] += $amount; // Aumenta o crédito do pagador
-                    $item['total_paid_common'] += $amount; // Pode ser útil para relatórios, ajustando o "total pago"
-                }
-                return $item;
-            });
-
-            // Ajustar o saldo do beneficiário (quem deve)
-            $updatedBalances = $updatedBalances->map(function ($item) use ($monthYear, $beneficiary, $amount) {
-                if ($item['month_year'] === $monthYear && $item['participant'] === $beneficiary) {
-                    $item['balance'] -= $amount; // Diminui o crédito (aumenta o débito) do beneficiário
-                }
-                return $item;
-            });
-        }
-
-        return $updatedBalances->toArray();
+        return $this->calculadora->calcular(
+            $mes,
+            $this->repositorio->paraCompetencia($mes),
+            Participant::cases(),
+        );
     }
 
-
+    /**
+     * O domínio trabalha em centavos; as páginas de relatório esperam número
+     * para formatar como moeda.
+     */
+    private function paraFloat(Money $valor): float
+    {
+        return (float) $valor->paraDecimal();
+    }
 }

@@ -5,6 +5,7 @@ namespace App\Infra\Csv;
 use DateTimeImmutable;
 use App\Domain\Finance\Entities\Transaction;
 use App\Domain\Finance\Enums\ExpenseScope;
+use App\Domain\Finance\Enums\Participant;
 use App\Domain\FonteDeLancamentos;
 use RuntimeException;
 
@@ -24,7 +25,7 @@ final class LeitorDeFaturaCsv implements FonteDeLancamentos
 
     public function __construct(
         private readonly string $caminho,
-        private readonly string $quemPagou,
+        private readonly Participant $quemPagou,
         private readonly ExpenseScope $tipoPadrao,
         private readonly ConversorDeValorBrasileiro $conversor = new ConversorDeValorBrasileiro(),
     ) {
@@ -66,7 +67,6 @@ final class LeitorDeFaturaCsv implements FonteDeLancamentos
                     whoPaid: $this->quemPagou,
                     scope: $this->tipoPadrao,
                     responsible: null,
-                    isShared: null,
                 );
             }
 

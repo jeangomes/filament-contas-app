@@ -105,4 +105,30 @@ final readonly class Money
         return $this->centavos > 0;
     }
 
+    /**
+     * Divide o valor em partes iguais, distribuindo o resto (em centavos)
+     * uma unidade por vez entre as primeiras partes, de modo que a soma das
+     * partes retornadas seja sempre exatamente igual ao valor original —
+     * ao contrário da divisão em ponto flutuante, que pode perder ou criar
+     * centavos fantasmas.
+     *
+     * @return list<self>
+     */
+    public function dividirIgualmente(int $partes): array
+    {
+        if ($partes < 1) {
+            throw new \InvalidArgumentException('Número de partes deve ser >= 1.');
+        }
+
+        $base = intdiv($this->centavos, $partes);
+        $resto = $this->centavos % $partes;
+        $sinalDoResto = $resto <=> 0;
+
+        $resultado = [];
+        for ($i = 0; $i < $partes; $i++) {
+            $resultado[] = new self($base + ($i < abs($resto) ? $sinalDoResto : 0));
+        }
+
+        return $resultado;
+    }
 }

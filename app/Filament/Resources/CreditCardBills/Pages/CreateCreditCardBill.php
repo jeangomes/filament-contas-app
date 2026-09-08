@@ -6,6 +6,11 @@ use App\Filament\Resources\CreditCardBills\CreditCardBillResource;
 use Filament\Resources\Pages\CreateRecord;
 use App\Models\CreditCardBill;
 use Illuminate\Support\Facades\Storage;
+use App\Domain\Finance\Entities\Transaction;
+use App\Domain\Finance\Enums\ExpenseScope;
+use App\Domain\Finance\Enums\Participant;
+use App\Infra\Csv\LeitorDeFaturaCsv;
+use RuntimeException;
 
 class CreateCreditCardBill extends CreateRecord
 {
@@ -14,86 +19,57 @@ class CreateCreditCardBill extends CreateRecord
 
     protected function afterCreate(): void
     {
-        /** @var CreditCardBill $bill */
-        $bill = $this->record;
-        if ($this->data['origin_format'] === 'CSV') {
-            $resultado = $this->processarDespesasFromCSV($bill->owner_bill, $this->data['most_common_expenses']);
-            foreach ($resultado as $item) {
-                $bill->transactions()->create($item);
-            }
-        }/*else {
-            $resultado = $this->processarDespesas($this->data['content_transaction'], $bill->owner_bill, $this->data['most_common_expenses']);
-        }*/
+        if (($this->data['origin_format'] ?? null) !== 'CSV') {
+            return;
+        }
 
+        /** @var CreditCardBill $fatura */
+        $fatura = $this->record;
+
+        $fonte = new LeitorDeFaturaCsv(
+            caminho: $this->caminhoAbsolutoDoCsv($fatura->csv_file),
+            quemPagou: Participant::from($fatura->owner_bill),
+            tipoPadrao: $this->data['most_common_expenses']
+                ? ExpenseScope::Comum
+                : ExpenseScope::Individual,
+        );
+
+        $atributos = array_map(
+            $this->paraAtributos(...),
+            $fonte->obter(),
+        );
+
+        if ($atributos !== []) {
+            $fatura->transactions()->createMany($atributos);
+        }
     }
 
-    private function processarDespesasFromCSV($who_paid, $most_common_expenses): array
+    private function caminhoAbsolutoDoCsv(?string $caminho): string
     {
-        $record = $this->record;
-
-        $path = $record->csv_file; // ex: imports/csv/abc123.csv
-
-        if (! Storage::disk('private')->exists($path)) {
-            return [];
+        // Como $hasDatabaseTransactions = true, lançar aqui reverte a criação
+        // da fatura — evita fatura órfã sem lançamentos. Se preferir manter a
+        // fatura, troque por uma Notification::make()-danger() e um return.
+        if ($caminho === null || ! Storage::disk('private')->exists($caminho)) {
+            throw new RuntimeException("CSV da fatura não encontrado: $caminho");
         }
 
-        $fullPath = Storage::disk('private')->path($path);
-        $data = [];
-        if (($handle = fopen($fullPath, 'r')) !== false) {
-
-            $header = fgetcsv($handle, 1000, ','); // primeira linha (cabeçalho)
-
-            while (($row = fgetcsv($handle, 1000, ',')) !== false) {
-                $item = array_combine($header, $row);
-                $data[] = $item;
-            }
-
-            fclose($handle);
-        }
-
-        $default_common_expenses = (bool)$most_common_expenses;
-
-        $resultado = [];
-        foreach ($data as $item) {
-            $resultado[] = [
-                'transaction_date' => $item['date'],
-                'description' => $item['title'],
-                //'parcelas' => $matches[3] ?? null, // Parcelas (ex.: "1/3"), se existirem
-                'amount' => $this->normalizarValor($item['amount']),
-                'individual_expense' => !$default_common_expenses,
-                'common_expense' => $default_common_expenses,
-                'who_paid' => $who_paid
-            ];
-        }
-
-        return $resultado;
+        return Storage::disk('private')->path($caminho);
     }
 
-    private function normalizarValor(string $bruto): string
+    /**
+     * Mapeia o objeto de domínio para os atributos do Eloquent.
+     *
+     * @return array<string, mixed>
+     */
+    private function paraAtributos(Transaction $lancamento): array
     {
-        $bruto = trim($bruto);
-        $negativo = str_starts_with($bruto, '-'); // cobre "- 2.825,51"
-
-        // mantém só dígitos e separadores
-        $valor = preg_replace('/[^\d.,]/', '', $bruto);
-
-        $ultimaVirgula = strrpos($valor, ',');
-        $ultimoPonto   = strrpos($valor, '.');
-
-        if ($ultimaVirgula !== false && $ultimoPonto !== false) {
-            if ($ultimaVirgula > $ultimoPonto) {
-                // BR: 2.825,51 → ponto é milhar, vírgula é decimal
-                $valor = str_replace('.', '', $valor);
-                $valor = str_replace(',', '.', $valor);
-            } else {
-                // US com milhar: 2,825.51 → vírgula é milhar
-                $valor = str_replace(',', '', $valor);
-            }
-        } elseif ($ultimaVirgula !== false) {
-            $valor = str_replace(',', '.', $valor); // só vírgula: decimal BR
-        }
-        // só ponto (ou nenhum): já está no formato do MySQL
-
-        return ($negativo ? '-' : '') . $valor; // ex.: "-2825.51"
+        return [
+            'transaction_date' => $lancamento->date()->format('Y-m-d'),
+            'description' => $lancamento->description(),
+            'amount' => $lancamento->amount()->paraDecimal(), // "-2825.51" para coluna DECIMAL
+            'common_expense' => $lancamento->ehDespesaComum(),
+            'individual_expense' => $lancamento->ehDespesaIndividual(),
+            'who_paid' => $lancamento->whoPaid()->value,
+        ];
     }
 }
