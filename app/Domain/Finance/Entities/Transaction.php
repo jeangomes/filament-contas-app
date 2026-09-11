@@ -21,6 +21,7 @@ readonly class Transaction
         private ExpenseScope      $scope,
         private ?Participant      $responsible = null, // Quem deveria pagar
         private TransactionType   $type = TransactionType::FixedExpense,
+        private bool              $deFatura = false,   // Veio de fatura de cartão?
     ) {}
 
     public function date(): DateTimeImmutable
@@ -53,6 +54,16 @@ readonly class Transaction
         return $this->responsible;
     }
 
+    /**
+     * Quem de fato arca com a despesa. Quando ninguém foi apontado como
+     * responsável, quem pagou é quem arca — é o que sustenta o custo de vida
+     * dos lançamentos sem 'responsible' preenchido.
+     */
+    public function responsavelEfetivo(): Participant
+    {
+        return $this->responsible ?? $this->whoPaid;
+    }
+
     public function tipo(): ExpenseScope
     {
         return $this->scope;
@@ -61,6 +72,16 @@ readonly class Transaction
     public function type(): TransactionType
     {
         return $this->type;
+    }
+
+    /**
+     * Item de fatura de cartão (por oposição a lançamento avulso). A
+     * competência já foi resolvida na origem, então essa informação precisa
+     * viajar junto: é ela que separa "casa" de "cartão".
+     */
+    public function ehDeFatura(): bool
+    {
+        return $this->deFatura;
     }
 
     /**
@@ -93,7 +114,6 @@ readonly class Transaction
     public function isCrossDebt(): bool
     {
         return $this->ehDespesaIndividual()
-            && $this->responsible !== null
-            && $this->whoPaid !== $this->responsible;
+            && $this->responsavelEfetivo() !== $this->whoPaid;
     }
 }

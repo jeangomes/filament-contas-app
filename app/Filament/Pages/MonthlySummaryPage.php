@@ -1,298 +1,273 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Pages;
 
-use App\Services\MonthlySummaryService;
-use Exception;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\ViewAction;
-use Filament\Forms\Components\TextInput;
-use Filament\Pages\Page;
-use BackedEnum;
-use Filament\Schemas\Components\Fieldset;
-use Filament\Schemas\Components\Section;
-use Filament\Tables\Concerns\InteractsWithTable;
-use UnitEnum;
+use App\Domain\Finance\Enums\Participant;
+use App\Domain\Finance\Repositories\RepositorioDeLancamentos;
+use App\Domain\Finance\ValueObjects\ReferenceMonth;
+use App\Models\MonthlyParticipantSummary;
 use App\Models\MonthlySummary;
+use App\Services\FechamentoMensalService;
+use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
+use Filament\Pages\Page;
+use Filament\Schemas\Components\Section;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ToggleColumn;
+use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Number;
+use Livewire\Attributes\Computed;
+use Throwable;
+use UnitEnum;
 
+/**
+ * O histórico de fechamentos mensais já apurados.
+ *
+ * Tudo aqui é leitura do que foi persistido — a apuração vive no domínio e
+ * chega por {@see FechamentoMensalService}. O único campo editável é
+ * `difference_paid`, porque é o único que não é calculado.
+ *
+ * O acesso é controlado pelo painel (`->login()` + `authMiddleware`), não por
+ * autorização própria desta página.
+ */
 class MonthlySummaryPage extends Page implements HasTable
 {
     use InteractsWithTable;
+
     protected static string|null|BackedEnum $navigationIcon = 'heroicon-o-calculator';
 
     protected string $view = 'filament.pages.monthly-summary-page';
-    protected static ?string $title = 'Consolidado (Armazenado)';
-    protected static string | UnitEnum | null $navigationGroup = 'Resultados/Relatórios';
-    protected static ?int $navigationSort = 3;
 
-    private MonthlySummaryService $summaryService;
+    protected static ?string $title = 'Consolidado Mensal';
 
-    public function boot(MonthlySummaryService $summaryService): void
+    protected static string|UnitEnum|null $navigationGroup = 'Resultados/Relatórios';
+
+    protected static ?int $navigationSort = 1;
+
+    private FechamentoMensalService $fechamento;
+
+    private RepositorioDeLancamentos $repositorio;
+
+    public function boot(FechamentoMensalService $fechamento, RepositorioDeLancamentos $repositorio): void
     {
-        $this->summaryService = $summaryService;
-    }
-
-    protected function getHeaderActions(): array
-    {
-        return [
-            // Action para calcular um mês específico
-            Action::make('calculate_month')
-                ->label('Calcular Mês')
-                ->icon('heroicon-o-calculator')
-                ->color('primary')
-                ->schema([
-                    Select::make('reference_month')
-                        ->label('Mês de Referência')
-                        ->options($this->getMonthOptions())
-                        ->default(Carbon::now()->subMonth()->format('Y-m'))
-                        ->required()
-                        ->helperText('Selecione o mês que deseja calcular'),
-                ])
-                ->action(function (array $data): void {
-                    try {
-                        $summary = $this->summaryService->calculateAndPersistSummary($data['reference_month']);
-
-                        Notification::make()
-                            ->title('✅ Resumo Calculado!')
-                            ->body("Mês {$data['reference_month']} calculado com sucesso")
-                            ->success()
-                            ->duration(5000)
-                            ->send();
-
-                        // Refresh da tabela
-                        $this->resetTable();
-
-                    } catch (Exception $e) {
-                        Notification::make()
-                            ->title('❌ Erro no Cálculo')
-                            ->body($e->getMessage())
-                            ->danger()
-                            ->duration(8000)
-                            ->send();
-                    }
-                })
-                ->modalWidth(500),
-
-            // Action para recalcular últimos 6 meses
-//            Action::make('recalculate_recent')
-//                ->label('Recalcular Últimos 6 Meses')
-//                ->icon('heroicon-o-arrow-path')
-//                ->color('warning')
-//                ->requiresConfirmation()
-//                ->modalHeading('Recalcular Últimos 6 Meses')
-//                ->modalDescription('Esta ação irá recalcular os resumos dos últimos 6 meses. Dados existentes serão sobrescritos.')
-//                ->modalSubmitActionLabel('Sim, Recalcular')
-//                ->action(function (): void {
-//                    try {
-//                        $months = collect();
-//                        $currentMonth = Carbon::now()->subMonth();
-//
-//                        for ($i = 0; $i < 6; $i++) {
-//                            $months->push($currentMonth->format('Y-m'));
-//                            $currentMonth->subMonth();
-//                        }
-//
-//                        $results = $this->summaryService->recalculateMultipleMonths($months->toArray());
-//                        $successful = collect($results)->filter()->count();
-//
-//                        Notification::make()
-//                            ->title('✅ Recálculo Concluído!')
-//                            ->body("{$successful} de {$months->count()} meses recalculados com sucesso")
-//                            ->success()
-//                            ->duration(5000)
-//                            ->send();
-//
-//                        $this->resetTable();
-//
-//                    } catch (\Exception $e) {
-//                        Notification::make()
-//                            ->title('❌ Erro no Recálculo')
-//                            ->body($e->getMessage())
-//                            ->danger()
-//                            ->duration(8000)
-//                            ->send();
-//                    }
-//                }),
-        ];
+        $this->fechamento = $fechamento;
+        $this->repositorio = $repositorio;
     }
 
     public function table(Table $table): Table
     {
         return $table
-            ->query(MonthlySummary::query())
-            ->defaultSort('reference_month', 'desc')
+            ->query(
+                // Eager load obrigatório: AppServiceProvider liga
+                // preventLazyLoading() fora de produção, e as colunas por
+                // participante leem a relação linha a linha.
+                MonthlySummary::query()->with(['participantSummaries', 'homeExpenses']),
+            )
+            ->defaultSort('competencia', 'desc')
             ->columns([
-                TextColumn::make('reference_month')
-                    ->label('Mês Ref.')
+                TextColumn::make('competencia')
+                    ->label('Competência')
+                    ->date('m/Y')
                     ->sortable()
                     ->badge()
-                    ->color('primary'),
+                    ->color('primary')
+                    ->description(fn (MonthlySummary $registro): string => 'gastos de ' . $registro->reference_month->format('m/Y')),
 
-                TextColumn::make('due_payment_month')
-                    ->label('Mês Vcto.')
-                    ->dateTime('M/Y')
-                    ->sortable()
-                    ->badge()
-                    ->color('gray'),
+                TextColumn::make('total_home_expenses')->label('Casa')->money('BRL')->sortable(),
+                TextColumn::make('total_common_expenses')->label('Total comum')->money('BRL')->sortable(),
 
-                TextColumn::make('total_home_expenses')
-                    ->label('Despesas Casa')->money('BRL')
-                    ->sortable(),
+                $this->colunaDoParticipante(Participant::D, 'living_cost', 'Custo vida D')->color('success'),
+                $this->colunaDoParticipante(Participant::J, 'living_cost', 'Custo vida J')->color('success'),
 
-                TextColumn::make('d_credit_card_total')
-                    ->label('Cartão D')->money('BRL')
-                    ->color('info'),
+                $this->colunaDoParticipante(Participant::D, 'card_total', 'Cartão D')->color('info'),
+                $this->colunaDoParticipante(Participant::J, 'card_total', 'Cartão J')->color('info'),
 
-                TextColumn::make('j_credit_card_total')
-                    ->label('Cartão J')->money('BRL')
-                    ->color('info'),
+                $this->colunaDoParticipante(Participant::D, 'balance', 'Saldo D')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                $this->colunaDoParticipante(Participant::J, 'balance', 'Saldo J')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('balance_description')
-                    ->label('Saldo')
+                    ->label('Acerto')
                     ->badge()
-                    ->color(fn (MonthlySummary $record): string =>
-                    $record->balance_difference == 0 ? 'success' : 'warning'
-                    ),
+                    ->color(fn (MonthlySummary $registro): string => $registro->settlement_payer === null ? 'success' : 'warning'),
 
-                TextColumn::make('d_living_cost')
-                    ->label('Custo Vida D')->money('BRL')
-                    ->color('success'),
-
-                TextColumn::make('j_living_cost')
-                    ->label('Custo Vida J')->money('BRL')
-                    ->color('success'),
+                // Único campo editável: é informação do usuário, não do cálculo,
+                // e sobrevive ao recálculo.
+                ToggleColumn::make('difference_paid')->label('Pago'),
 
                 TextColumn::make('calculated_at')
                     ->label('Calculado em')
                     ->dateTime('d/m/Y H:i')
-                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->recordActions([
                 ViewAction::make()
+                    ->label('Detalhe')
+                    ->modalHeading(fn (MonthlySummary $registro): string => 'Fechamento de ' . $registro->competencia->format('m/Y'))
                     ->schema([
-                        // Despesas da Casa
-                        Section::make('Despesas da Casa')
+                        Section::make('Despesas da casa')
                             ->schema([
-                               TextInput::make('rent_apartment')
-                                    ->label('Aluguel')
-                                    ->disabled(),
-                               TextInput::make('condo_apartment')
-                                    ->label('Condomínio')
-                                    ->disabled(),
-                               TextInput::make('eventual_apartment')
-                                    ->label('Eventuais')
-                                    ->disabled(),
-                               TextInput::make('light_bill')
-                                    ->label('Light')
-                                    ->disabled(),
-                               TextInput::make('naturgy_bill')
-                                    ->label('Naturgy')
-                                    ->disabled(),
-                               TextInput::make('claro_bill')
-                                    ->label('Claro')
-                                    ->disabled(),
-                               TextInput::make('total_home_expenses')
-                                    ->label('Total Casa')
-                                    ->disabled()
-                                    ->extraAttributes(['class' => 'font-bold']),
-                            ])
-                            ->columns(3),
-
-                        // Cartões de Crédito
-                        Section::make('Cartões de Crédito')
-                            ->schema([
-                                Fieldset::make('Participante D')
+                                RepeatableEntry::make('homeExpenses')
+                                    ->hiddenLabel()
                                     ->schema([
-                                       TextInput::make('d_credit_card_total')
-                                            ->label('Total D')
-                                            ->disabled(),
-                                       TextInput::make('d_credit_card_common')
-                                            ->label('Comum D')
-                                            ->disabled(),
-                                       TextInput::make('d_credit_card_individual')
-                                            ->label('Individual D')
-                                            ->disabled(),
-                                    ]),
+                                        TextEntry::make('label')->label('Descrição'),
+                                        TextEntry::make('amount')->label('Valor')->money('BRL'),
+                                    ])
+                                    ->columns(2),
+                            ]),
 
-                               Fieldset::make('Participante J')
-                                    ->schema([
-                                       TextInput::make('j_credit_card_total')
-                                            ->label('Total J')
-                                            ->disabled(),
-                                       TextInput::make('j_credit_card_common')
-                                            ->label('Comum J')
-                                            ->disabled(),
-                                       TextInput::make('j_credit_card_individual')
-                                            ->label('Individual J')
-                                            ->disabled(),
-                                    ]),
-                            ])
-                            ->columns(2),
-
-                        // Resumo Final
-                        Section::make('Resumo Final')
+                        Section::make('Por participante')
                             ->schema([
-                                TextInput::make('balance_difference')
-                                    ->label('Diferença')
-                                    ->disabled(),
-                                TextInput::make('balance_payer')
-                                    ->label('Quem Paga')
-                                    ->disabled(),
-                                TextInput::make('d_living_cost')
-                                    ->label('Custo de Vida D')
-                                    ->disabled(),
-                                TextInput::make('j_living_cost')
-                                    ->label('Custo de Vida J')
-                                    ->disabled(),
-                            ])
-                            ->columns(2),
+                                RepeatableEntry::make('participantSummaries')
+                                    ->hiddenLabel()
+                                    ->schema([
+                                        TextEntry::make('participant')->label('Participante'),
+                                        TextEntry::make('living_cost')->label('Custo de vida')->money('BRL'),
+                                        TextEntry::make('card_total')->label('Cartão (total)')->money('BRL'),
+                                        TextEntry::make('card_common')->label('Cartão (comum)')->money('BRL'),
+                                        TextEntry::make('card_individual')->label('Cartão (individual)')->money('BRL'),
+                                        TextEntry::make('paid_common')->label('Pagou de comum')->money('BRL'),
+                                        TextEntry::make('share_common')->label('Cota do comum')->money('BRL'),
+                                        TextEntry::make('balance')->label('Saldo')->money('BRL'),
+                                    ])
+                                    ->columns(4),
+                            ]),
                     ])
-                    ->modalWidth(700),
-
-                DeleteAction::make()
-                    ->requiresConfirmation(),
+                    ->modalWidth('5xl'),
             ])
-            ->emptyStateHeading('Nenhum resumo encontrado')
-            ->emptyStateDescription('Clique em "Calcular Mês" para gerar o primeiro resumo')
+            ->emptyStateHeading('Nenhum fechamento calculado')
+            ->emptyStateDescription('Use "Calcular mês" para apurar a primeira competência.')
             ->emptyStateIcon('heroicon-o-calculator');
     }
 
-    /**
-     * Gera opções de meses para o select (últimos 24 meses + próximos 3)
-     */
-
-    private function getMonthOptions(): array
+    protected function getHeaderActions(): array
     {
-        $options = [];
-        $start = Carbon::now()->addMonths(3);
+        return [
+            Action::make('calcular_mes')
+                ->label('Calcular mês')
+                ->icon('heroicon-o-calculator')
+                ->color('primary')
+                ->schema([
+                    Select::make('competencia')
+                        ->label('Competência')
+                        ->options($this->opcoesDeCompetencia())
+                        ->default(Carbon::now()->format('Y-m'))
+                        ->required()
+                        ->helperText('O mês do vencimento das faturas — não o mês em que os gastos aconteceram.'),
+                ])
+                ->action(function (array $data): void {
+                    try {
+                        $resumo = $this->fechamento->apurarEPersistir(
+                            ReferenceMonth::fromString($data['competencia']),
+                        );
+
+                        Notification::make()
+                            ->title('Competência fechada')
+                            ->body($resumo->balance_description)
+                            ->success()
+                            ->send();
+
+                        $this->resetTable();
+                    } catch (Throwable $erro) {
+                        $this->notificarErro($erro);
+                    }
+                })
+                ->modalWidth('md'),
+
+            Action::make('recalcular_tudo')
+                ->label('Recalcular todos')
+                ->icon('heroicon-o-arrow-path')
+                ->color('warning')
+                ->requiresConfirmation()
+                ->modalHeading('Recalcular todo o histórico')
+                ->modalDescription('Os números são reconstruídos a partir das transações. O que você marcou como pago e as observações não se perdem.')
+                ->modalSubmitActionLabel('Recalcular')
+                ->action(function (): void {
+                    try {
+                        $competencias = $this->repositorio->competenciasDisponiveis();
+
+                        foreach ($competencias as $mes) {
+                            $this->fechamento->apurarEPersistir($mes);
+                        }
+
+                        Notification::make()
+                            ->title(count($competencias) . ' competência(s) recalculada(s)')
+                            ->success()
+                            ->send();
+
+                        $this->resetTable();
+                    } catch (Throwable $erro) {
+                        $this->notificarErro($erro);
+                    }
+                }),
+        ];
+    }
+
+    /**
+     * O fechamento mais recente, para os cards do topo. `#[Computed]` evita
+     * repetir a consulta a cada leitura na view.
+     */
+    #[Computed]
+    public function ultimoFechamento(): ?MonthlySummary
+    {
+        return MonthlySummary::query()
+            ->with('participantSummaries')
+            ->orderByDesc('competencia')
+            ->first();
+    }
+
+    public function formatMoney(string|float|int|null $valor): string
+    {
+        return Number::currency((float) ($valor ?? 0), in: 'BRL', locale: 'pt_BR');
+    }
+
+    private function colunaDoParticipante(Participant $participante, string $campo, string $rotulo): TextColumn
+    {
+        // Lê da relação já carregada: nenhuma consulta por linha.
+        return TextColumn::make("{$participante->value}_{$campo}")
+            ->label($rotulo)
+            ->money('BRL')
+            ->state(fn (MonthlySummary $registro): ?string => $registro
+                ->participantSummary($participante)?->{$campo});
+    }
+
+    /**
+     * Últimos 24 meses e os 3 próximos, como o select antigo oferecia.
+     *
+     * @return array<string, string>
+     */
+    private function opcoesDeCompetencia(): array
+    {
+        $opcoes = [];
+        $inicio = Carbon::now()->addMonths(3);
 
         for ($i = 0; $i < 27; $i++) {
-            $date = $start->copy()->subMonths($i);
-
-            // Exemplo: "fev/2025"
-            $label = $date->translatedFormat('M/Y'); // ← pt_BR
-
-            $options[$date->format('Y-m')] = $label;
+            $data = $inicio->copy()->subMonths($i);
+            $opcoes[$data->format('Y-m')] = $data->translatedFormat('M/Y');
         }
 
-        return $options;
+        return $opcoes;
     }
 
-    /**
-     * Formatar valores monetários
-     */
-    public function formatMoney($value): string
+    private function notificarErro(Throwable $erro): void
     {
-        return Number::currency($value, in: 'BRL', locale: 'pt_BR');
-    }
+        report($erro); // o detalhe vai para o log, não para a tela
 
+        Notification::make()
+            ->title('Não foi possível calcular')
+            ->body($erro->getMessage())
+            ->danger()
+            ->send();
+    }
 }

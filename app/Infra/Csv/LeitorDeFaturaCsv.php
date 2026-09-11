@@ -19,9 +19,9 @@ use RuntimeException;
  */
 final class LeitorDeFaturaCsv implements FonteDeLancamentos
 {
-    private const COLUNA_DATA = 'date';
-    private const COLUNA_DESCRICAO = 'title';
-    private const COLUNA_VALOR = 'amount';
+    private const string COLUNA_DATA = 'date';
+    private const string COLUNA_DESCRICAO = 'title';
+    private const string COLUNA_VALOR = 'amount';
 
     public function __construct(
         private readonly string $caminho,
@@ -67,6 +67,7 @@ final class LeitorDeFaturaCsv implements FonteDeLancamentos
                     whoPaid: $this->quemPagou,
                     scope: $this->tipoPadrao,
                     responsible: null,
+                    deFatura: true,
                 );
             }
 

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Observers\TransactionObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,6 +13,7 @@ use Spatie\Activitylog\LogOptions;
 /**
  * @property-read CreditCardBill $creditCardBill
  */
+#[ObservedBy(TransactionObserver::class)]
 class Transaction extends Model
 {
     use HasFactory;
@@ -64,24 +67,5 @@ class Transaction extends Model
     public function expenseCategory(): BelongsTo
     {
         return $this->belongsTo(ExpenseCategory::class);
-    }
-
-    protected static function booted(): void
-    {
-        static::updated(function (Transaction $transaction) {
-            $transaction->load(['creditCardBill']);
-            $creditCardBill = $transaction->creditCardBill;
-            if ($creditCardBill) {
-                $creditCardBill->common_amount = $creditCardBill->transactions()
-                    ->where('common_expense', '=', 1)
-                    ->where('type','!=', 'pgto_de_fatura')
-                    ->sum('amount');
-                $creditCardBill->individual_amount = $creditCardBill->transactions()
-                    ->where('individual_expense', '=', 1)
-                    ->where('type','!=', 'pgto_de_fatura')
-                    ->sum('amount');
-                $creditCardBill->save();
-            }
-        });
     }
 }

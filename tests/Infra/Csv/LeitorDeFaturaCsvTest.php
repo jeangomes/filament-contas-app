@@ -73,6 +73,19 @@ final class LeitorDeFaturaCsvTest extends TestCase
     }
 
     #[Test]
+    public function lancamento_importado_de_fatura_nasce_marcado_como_de_fatura(): void
+    {
+        $this->escrever(
+            "date,title,amount\n"
+            . "2026-06-08,Sorveteria Alex,\"43,00\"\n"
+        );
+
+        [$lancamento] = $this->leitor(Participant::J, ExpenseScope::Comum)->obter();
+
+        $this->assertTrue($lancamento->ehDeFatura());
+    }
+
+    #[Test]
     public function identifica_pagamento_recebido_como_credito(): void
     {
         $this->escrever(

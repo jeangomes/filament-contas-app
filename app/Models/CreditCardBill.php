@@ -29,6 +29,11 @@ class CreditCardBill extends Model
     {
         return [
             'amount' => 'float',
+            // Totais derivados, mantidos por TransactionObserver. Sem cast,
+            // voltavam como int no SQLite e string no MySQL — mesmo atributo,
+            // tipo diferente entre teste e produção, em valor monetário.
+            'common_amount' => 'decimal:2',
+            'individual_amount' => 'decimal:2',
             'due_date' => 'date:Y-m-d',
         ];
     }

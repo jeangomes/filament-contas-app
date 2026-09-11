@@ -86,11 +86,48 @@ final class TransactionTest extends TestCase
         $this->assertTrue($lancamento->referenceMonth()->equals(ReferenceMonth::fromString('2026-03')));
     }
 
+    #[Test]
+    public function responsavel_efetivo_e_quem_foi_apontado_como_responsavel(): void
+    {
+        $lancamento = $this->lancamento(
+            whoPaid: Participant::J,
+            scope: ExpenseScope::Individual,
+            responsible: Participant::D,
+        );
+
+        $this->assertSame(Participant::D, $lancamento->responsavelEfetivo());
+    }
+
+    #[Test]
+    public function sem_responsavel_apontado_quem_pagou_e_quem_arca(): void
+    {
+        $lancamento = $this->lancamento(
+            whoPaid: Participant::J,
+            scope: ExpenseScope::Individual,
+            responsible: null,
+        );
+
+        $this->assertSame(Participant::J, $lancamento->responsavelEfetivo());
+    }
+
+    #[Test]
+    public function lancamento_e_avulso_por_padrao(): void
+    {
+        $this->assertFalse($this->lancamento()->ehDeFatura());
+    }
+
+    #[Test]
+    public function identifica_item_de_fatura(): void
+    {
+        $this->assertTrue($this->lancamento(deFatura: true)->ehDeFatura());
+    }
+
     private function lancamento(
         Participant $whoPaid = Participant::D,
         ExpenseScope $scope = ExpenseScope::Comum,
         ?Participant $responsible = null,
         TransactionType $type = TransactionType::FixedExpense,
+        bool $deFatura = false,
     ): Transaction {
         return new Transaction(
             date: new DateTimeImmutable('2026-01-15'),
@@ -100,6 +137,7 @@ final class TransactionTest extends TestCase
             scope: $scope,
             responsible: $responsible,
             type: $type,
+            deFatura: $deFatura,
         );
     }
 }

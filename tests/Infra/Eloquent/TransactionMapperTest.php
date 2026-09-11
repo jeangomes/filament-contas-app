@@ -102,6 +102,21 @@ final class TransactionMapperTest extends TestCase
         $this->assertNull($lancamento->responsible());
     }
 
+    #[Test]
+    public function marca_lancamento_vindo_de_fatura(): void
+    {
+        $model = $this->model(['credit_card_bill_id' => 1]);
+        $model->setRelation('creditCardBill', $this->fatura('2026-04-10'));
+
+        $this->assertTrue($this->mapper->paraDominio($model)->ehDeFatura());
+    }
+
+    #[Test]
+    public function marca_lancamento_avulso_como_fora_de_fatura(): void
+    {
+        $this->assertFalse($this->mapper->paraDominio($this->model())->ehDeFatura());
+    }
+
     /**
      * Monta o model como ele chega do repositório: atributos brutos e a
      * relação já carregada (o repositório sempre faz eager load, então o

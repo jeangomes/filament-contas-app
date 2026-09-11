@@ -43,6 +43,7 @@ final class TransactionMapper
                 ? Participant::from($model->responsible_for_expense)
                 : null,
             type: TransactionType::from($model->type),
+            deFatura: $model->creditCardBill !== null,
         );
     }
 

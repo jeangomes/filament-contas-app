@@ -1,123 +1,73 @@
 <x-filament-panels::page>
     <div class="space-y-6">
-        {{-- Cards de Resumo Rápido --}}
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            @php
-                $latestSummary = \App\Models\MonthlySummary::latest()->first();
-            @endphp
+        @php($ultimo = $this->ultimoFechamento)
 
-            @if($latestSummary)
+        @if($ultimo)
+            {{-- Resumo do fechamento mais recente --}}
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <x-filament::card>
-                    <div class="flex items-center space-x-2">
-                        <div class="p-2 bg-primary-100 rounded-full">
-                            <x-heroicon-o-home class="w-5 h-5 text-primary-600" />
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-600">Último Mês Calculado</p>
-                            <p class="text-lg font-semibold">{{ $latestSummary->reference_month }}</p>
-                        </div>
-                    </div>
+                    <p class="text-sm text-gray-600">Última competência</p>
+                    <p class="text-lg font-semibold">{{ $ultimo->competencia->format('m/Y') }}</p>
+                    <p class="text-xs text-gray-500">gastos de {{ $ultimo->reference_month->format('m/Y') }}</p>
                 </x-filament::card>
 
                 <x-filament::card>
-                    <div class="flex items-center space-x-2">
-                        <div class="p-2 bg-green-100 rounded-full">
-                            <x-heroicon-o-currency-dollar class="w-5 h-5 text-green-600" />
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-600">Despesas Casa</p>
-                            <p class="text-lg font-semibold">{{ $this->formatMoney($latestSummary->total_home_expenses) }}</p>
-                        </div>
-                    </div>
+                    <p class="text-sm text-gray-600">Despesas da casa</p>
+                    <p class="text-lg font-semibold">{{ $this->formatMoney($ultimo->total_home_expenses) }}</p>
                 </x-filament::card>
 
                 <x-filament::card>
-                    <div class="flex items-center space-x-2">
-                        <div class="p-2 bg-blue-100 rounded-full">
-                            <x-heroicon-o-credit-card class="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-600">Total Cartões</p>
-                            <p class="text-lg font-semibold">{{ $this->formatMoney($latestSummary->d_credit_card_total + $latestSummary->j_credit_card_total) }}</p>
-                        </div>
-                    </div>
+                    <p class="text-sm text-gray-600">Total comum</p>
+                    <p class="text-lg font-semibold">{{ $this->formatMoney($ultimo->total_common_expenses) }}</p>
                 </x-filament::card>
 
                 <x-filament::card>
-                    <div class="flex items-center space-x-2">
-                        <div class="p-2 {{ $latestSummary->balance_difference == 0 ? 'bg-green-100' : 'bg-yellow-100' }} rounded-full">
-                            <x-heroicon-o-scale class="w-5 h-5 {{ $latestSummary->balance_difference == 0 ? 'text-green-600' : 'text-yellow-600' }}" />
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-600">Saldo</p>
-                            <p class="text-sm font-semibold">{{ $latestSummary->balance_description }}</p>
-                        </div>
-                    </div>
+                    <p class="text-sm text-gray-600">Acerto</p>
+                    <p class="text-sm font-semibold">{{ $ultimo->balance_description }}</p>
+                    @if($ultimo->difference_paid)
+                        <p class="text-xs text-green-600">já acertado</p>
+                    @endif
                 </x-filament::card>
-            @else
-                <div class="col-span-4">
-                    <x-filament::card>
-                        <div class="text-center py-8">
-                            <h3 class="text-lg font-medium text-gray-900 mb-2">Nenhum resumo encontrado</h3>
-                            <p class="text-gray-600 mb-4">Clique em "Calcular Mês" para gerar o primeiro resumo</p>
-                        </div>
-                    </x-filament::card>
-                </div>
-            @endif
-        </div>
+            </div>
 
-        {{-- Gráfico Simples dos Últimos Meses (opcional) --}}
-        @php
-            $recentSummaries = \App\Models\MonthlySummary::latest()->limit(6)->get();
-        @endphp
-
-        @if($recentSummaries->count() > 1)
+            {{-- Custo de vida de cada um na última competência --}}
             <x-filament::card>
-                <h3 class="text-lg font-medium mb-4">Custo de Vida - Últimos Meses</h3>
-                <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
-                    @foreach($recentSummaries->reverse() as $summary)
+                <h3 class="text-lg font-medium mb-4">Custo de vida — {{ $ultimo->competencia->format('m/Y') }}</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    @foreach($ultimo->participantSummaries->sortBy('participant') as $participante)
                         <div class="text-center">
-                            <p class="text-xs text-gray-500 mb-1">{{ \Carbon\Carbon::createFromFormat('Y-m-d', $summary->reference_month)->format('M/y') }}</p>
-                            <div class="space-y-1">
-                                <div class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
-                                    D: {{ $this->formatMoney($summary->d_living_cost) }}
-                                </div>
-                                <div class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
-                                    J: {{ $this->formatMoney($summary->j_living_cost) }}
-                                </div>
-                            </div>
+                            <p class="text-xs text-gray-500 mb-1">{{ $participante->participant->value }}</p>
+                            <p class="text-lg font-semibold">{{ $this->formatMoney($participante->living_cost) }}</p>
                         </div>
                     @endforeach
                 </div>
             </x-filament::card>
         @endif
 
-        {{-- Instruções de Uso --}}
+        {{ $this->table }}
+
         <x-filament::card>
-            <h3 class="text-lg font-medium mb-4">💡 Como Usar</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <h3 class="text-lg font-medium mb-4">Como funciona</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
                 <div>
-                    <h4 class="font-medium mb-2">Calcular Mês</h4>
-                    <ul class="space-y-1 text-gray-600">
-                        <li>• Selecione o mês de referência desejado</li>
-                        <li>• O sistema calculará automaticamente todas as despesas</li>
-                        <li>• Dados de cartões e contas serão processados</li>
-                        <li>• O resultado será salvo na tabela abaixo</li>
+                    <h4 class="font-medium mb-2 text-gray-900">Calcular mês</h4>
+                    <ul class="space-y-1">
+                        <li>• A competência é o mês do <strong>vencimento</strong> das faturas.</li>
+                        <li>• Os números são apurados das transações, não digitados.</li>
+                        <li>• Recalcular quantas vezes quiser é seguro: substitui, não duplica.</li>
+                        <li>• O que você marca como <strong>Pago</strong> sobrevive ao recálculo.</li>
                     </ul>
                 </div>
                 <div>
-                    <h4 class="font-medium mb-2">Visualizar Detalhes</h4>
-                    <ul class="space-y-1 text-gray-600">
-                        <li>• Clique no ícone "👁" para ver detalhes completos</li>
-                        <li>• Visualize despesas por categoria</li>
-                        <li>• Veja gastos individuais e comuns dos cartões</li>
-                        <li>• Confira o cálculo do custo de vida</li>
+                    <h4 class="font-medium mb-2 text-gray-900">Custo de vida × saldo</h4>
+                    <ul class="space-y-1">
+                        <li>• <strong>Custo de vida</strong>: quanto a vida de cada um custou no mês.</li>
+                        <li>• <strong>Saldo</strong>: quem adiantou dinheiro e quem ficou devendo.</li>
+                        <li>• São perguntas diferentes — não se somam.</li>
+                        <li>• Em "Detalhe" você vê as despesas da casa e os números completos.</li>
                     </ul>
                 </div>
             </div>
         </x-filament::card>
-
-        {{-- Tabela --}}
-        {{ $this->table }}
     </div>
 </x-filament-panels::page>
