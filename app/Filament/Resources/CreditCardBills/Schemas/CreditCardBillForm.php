@@ -11,6 +11,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Enums\Operation;
 use Filament\Forms\Components\FileUpload;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Leandrocfe\FilamentPtbrFormFields\Money;
 
 class CreditCardBillForm
 {
@@ -26,11 +27,9 @@ class CreditCardBillForm
                         'D' => 'D',
                         'J' => 'J',
                     ]),
-                TextInput::make('amount')->label('Valor')
-                    ->numeric()
-                    ->inputMode('decimal')
+                Money::make('amount')->label('Valor')
                     ->required(),
-                DatePicker::make('due_date')->label('Data de vencimento')
+                DatePicker::make('due_date')->label('Data de vencimento da fatura')
                     ->required(),
                 Select::make('most_common_expenses')->label('Em comum por padrão')->required()
                     ->hiddenOn(Operation::Edit)
