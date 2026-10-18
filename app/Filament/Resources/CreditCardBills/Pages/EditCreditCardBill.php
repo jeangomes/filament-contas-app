@@ -4,6 +4,7 @@ namespace App\Filament\Resources\CreditCardBills\Pages;
 
 use App\Filament\Resources\CreditCardBills\CreditCardBillResource;
 use App\Filament\Resources\CreditCardBills\Widgets\TransactionsByCategory;
+use App\Filament\Resources\CreditCardBills\Widgets\TransactionsByDescription;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
@@ -21,6 +22,7 @@ class EditCreditCardBill extends EditRecord
     protected function getFooterWidgets(): array
     {
         return [
+            TransactionsByDescription::class,
             TransactionsByCategory::class,
         ];
     }
