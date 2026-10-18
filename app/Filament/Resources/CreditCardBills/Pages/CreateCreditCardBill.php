@@ -6,10 +6,10 @@ use App\Filament\Resources\CreditCardBills\CreditCardBillResource;
 use Filament\Resources\Pages\CreateRecord;
 use App\Models\CreditCardBill;
 use Illuminate\Support\Facades\Storage;
-use App\Domain\Finance\Entities\Transaction;
 use App\Domain\Finance\Enums\ExpenseScope;
 use App\Domain\Finance\Enums\Participant;
 use App\Infra\Csv\LeitorDeFaturaCsv;
+use App\Infra\Eloquent\TransactionMapper;
 use RuntimeException;
 
 class CreateCreditCardBill extends CreateRecord
@@ -34,8 +34,10 @@ class CreateCreditCardBill extends CreateRecord
                 : ExpenseScope::Individual,
         );
 
+        $mapper = new TransactionMapper();
+
         $atributos = array_map(
-            $this->paraAtributos(...),
+            $mapper->paraAtributos(...),
             $fonte->obter(),
         );
 
@@ -54,22 +56,5 @@ class CreateCreditCardBill extends CreateRecord
         }
 
         return Storage::disk('private')->path($caminho);
-    }
-
-    /**
-     * Mapeia o objeto de domínio para os atributos do Eloquent.
-     *
-     * @return array<string, mixed>
-     */
-    private function paraAtributos(Transaction $lancamento): array
-    {
-        return [
-            'transaction_date' => $lancamento->date()->format('Y-m-d'),
-            'description' => $lancamento->description(),
-            'amount' => $lancamento->amount()->paraDecimal(), // "-2825.51" para coluna DECIMAL
-            'common_expense' => $lancamento->ehDespesaComum(),
-            'individual_expense' => $lancamento->ehDespesaIndividual(),
-            'who_paid' => $lancamento->whoPaid()->value,
-        ];
     }
 }

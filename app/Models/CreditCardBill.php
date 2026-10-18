@@ -10,6 +10,7 @@ use Spatie\Activitylog\LogOptions;
 
 /**
  * @property string $owner_bill
+ * @property string $csv_file
  */
 class CreditCardBill extends Model
 {

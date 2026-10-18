@@ -8,6 +8,7 @@ use App\Domain\Finance\Enums\ExpenseScope;
 use App\Domain\Finance\Enums\Participant;
 use App\Domain\Finance\Enums\TransactionType;
 use App\Domain\Finance\ValueObjects\Money;
+use App\Domain\Finance\ValueObjects\Parcela;
 use App\Domain\Finance\ValueObjects\ReferenceMonth;
 use DateTimeImmutable;
 
@@ -22,6 +23,7 @@ readonly class Transaction
         private ?Participant      $responsible = null, // Quem deveria pagar
         private TransactionType   $type = TransactionType::FixedExpense,
         private bool              $deFatura = false,   // Veio de fatura de cartão?
+        private ?Parcela          $parcela = null,     // "3/6" numa compra parcelada
     ) {}
 
     public function date(): DateTimeImmutable
@@ -42,6 +44,26 @@ readonly class Transaction
     public function amount(): Money
     {
         return $this->amount;
+    }
+
+    public function parcela(): ?Parcela
+    {
+        return $this->parcela;
+    }
+
+    public function ehParcelada(): bool
+    {
+        return $this->parcela !== null;
+    }
+
+    /**
+     * A descrição sem o sufixo "- Parcela N/M": é ela que identifica a compra
+     * ao longo dos meses, já que cada parcela chega como um lançamento com
+     * descrição diferente.
+     */
+    public function descricaoDaSerie(): string
+    {
+        return Parcela::descricaoDaSerie($this->description);
     }
 
     public function whoPaid(): Participant

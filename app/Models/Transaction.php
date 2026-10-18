@@ -12,6 +12,10 @@ use Spatie\Activitylog\LogOptions;
 
 /**
  * @property-read CreditCardBill $creditCardBill
+ * @property ?int $installment_current
+ * @property ?int $installment_total
+ * @property $transaction_date
+ * @property string $description
  */
 #[ObservedBy(TransactionObserver::class)]
 class Transaction extends Model
@@ -22,12 +26,12 @@ class Transaction extends Model
     protected $fillable = [
         'transaction_date',
         'description',
-        'parcelas',
         'amount',
         'common_expense',
         'individual_expense',
         'responsible_for_expense','who_paid',
-        'origin','type','category'
+        'origin','type','expense_category_id',
+        'installment_current','installment_total',
     ];
 
     protected function casts(): array
@@ -37,7 +41,21 @@ class Transaction extends Model
             'common_expense' => 'boolean',
             'individual_expense' => 'boolean',
             'transaction_date' => 'date',
+            'installment_current' => 'integer',
+            'installment_total' => 'integer',
         ];
+    }
+
+    /**
+     * O rótulo da parcela ("3/6"), ou null quando a compra não é parcelada.
+     */
+    public function rotuloDaParcela(): ?string
+    {
+        if ($this->installment_current === null || $this->installment_total === null) {
+            return null;
+        }
+
+        return "{$this->installment_current}/{$this->installment_total}";
     }
 
     public function getActivitylogOptions(): LogOptions

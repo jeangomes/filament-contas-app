@@ -29,4 +29,12 @@ interface RepositorioDeLancamentos
      * @return list<ReferenceMonth>
      */
     public function competenciasDisponiveis(): array;
+
+    /**
+     * Todos os lançamentos parcelados, de qualquer competência: uma série
+     * atravessa meses por definição, então não dá para consultá-la por mês.
+     *
+     * @return list<Transaction>
+     */
+    public function parcelados(): array;
 }

@@ -9,6 +9,7 @@ use App\Domain\Finance\Enums\ExpenseScope;
 use App\Domain\Finance\Enums\Participant;
 use App\Domain\Finance\Enums\TransactionType;
 use App\Domain\Finance\ValueObjects\Money;
+use App\Domain\Finance\ValueObjects\Parcela;
 use App\Infra\Csv\ConversorDeValorBrasileiro;
 use App\Models\Transaction as TransactionEloquent;
 use DateTimeImmutable;
@@ -44,7 +45,44 @@ final class TransactionMapper
                 : null,
             type: TransactionType::from($model->type),
             deFatura: $model->creditCardBill !== null,
+            parcela: $this->parcela($model),
         );
+    }
+
+    /**
+     * Mapeia o lançamento de domínio para os atributos do Eloquent — o
+     * caminho de escrita, usado pela importação de CSV.
+     *
+     * @return array<string, mixed>
+     */
+    public function paraAtributos(TransactionDominio $lancamento): array
+    {
+        $is_payment = $lancamento->amount()->ehNegativo() && $lancamento->description() === 'Pagamento recebido';
+        return [
+            'transaction_date' => $lancamento->date()->format('Y-m-d'),
+            'description' => $lancamento->description(),
+            'amount' => $lancamento->amount()->paraDecimal(), // "-2825.51" para coluna DECIMAL
+            'common_expense' => $lancamento->ehDespesaComum(),
+            'individual_expense' => $lancamento->ehDespesaIndividual(),
+            'who_paid' => $lancamento->whoPaid()->value,
+            'installment_current' => $lancamento->parcela()?->atual(),
+            'installment_total' => $lancamento->parcela()?->total(),
+            'type' => $is_payment ? TransactionType::BillPayment : $lancamento->type(),
+        ];
+    }
+
+    /**
+     * A fonte da verdade da parcela são as colunas, não a descrição: linha
+     * antiga com o sufixo no texto e as colunas vazias é caso do comando
+     * `transactions:extrair-parcelas`, não de reparse a cada leitura.
+     */
+    private function parcela(TransactionEloquent $model): ?Parcela
+    {
+        if ($model->installment_current === null || $model->installment_total === null) {
+            return null;
+        }
+
+        return Parcela::de($model->installment_current, $model->installment_total);
     }
 
     /**

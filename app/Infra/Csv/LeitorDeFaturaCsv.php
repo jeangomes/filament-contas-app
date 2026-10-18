@@ -2,10 +2,12 @@
 
 namespace App\Infra\Csv;
 
+use App\Domain\Finance\Enums\TransactionType;
 use DateTimeImmutable;
 use App\Domain\Finance\Entities\Transaction;
 use App\Domain\Finance\Enums\ExpenseScope;
 use App\Domain\Finance\Enums\Participant;
+use App\Domain\Finance\ValueObjects\Parcela;
 use App\Domain\FonteDeLancamentos;
 use RuntimeException;
 
@@ -67,7 +69,11 @@ final class LeitorDeFaturaCsv implements FonteDeLancamentos
                     whoPaid: $this->quemPagou,
                     scope: $this->tipoPadrao,
                     responsible: null,
+                    type: TransactionType::VariableExpense,
                     deFatura: true,
+                    // A descrição fica íntegra ("... - Parcela 3/6"); a parcela
+                    // viaja em paralelo, estruturada.
+                    parcela: Parcela::extrairDe($registro[self::COLUNA_DESCRICAO]),
                 );
             }
 

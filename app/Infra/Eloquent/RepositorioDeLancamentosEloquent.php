@@ -43,6 +43,22 @@ final class RepositorioDeLancamentosEloquent implements RepositorioDeLancamentos
     }
 
     /**
+     * @return list<Transaction>
+     */
+    public function parcelados(): array
+    {
+        return TransactionEloquent::query()
+            // Eager load obrigatório (preventLazyLoading) e é ele que resolve a
+            // competência pelo vencimento da fatura.
+            ->with('creditCardBill')
+            ->whereNotNull('installment_current')
+            ->whereNotNull('installment_total')
+            ->get()
+            ->map(fn (TransactionEloquent $model): Transaction => $this->mapper->paraDominio($model))
+            ->all();
+    }
+
+    /**
      * @return list<ReferenceMonth>
      */
     public function competenciasDisponiveis(): array

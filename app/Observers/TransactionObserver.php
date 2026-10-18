@@ -12,25 +12,26 @@ use App\Models\Transaction;
  * Mantém atualizados os totais agregados da fatura
  * (`common_amount` / `individual_amount`), que são cache de exibição.
  *
- * Antes isto vivia em `Transaction::booted()` e reagia **só** a `updated`:
- * a importação de CSV dispara `created` e apagar dispara `deleted`, então os
- * totais só se acertavam se alguém editasse uma transação à mão depois.
+ * **Recalcula só na edição (`updated`), por decisão.** Criar e apagar não
+ * disparam recálculo: a importação de CSV insere a fatura inteira de uma vez e
+ * não vale um SUM por linha inserida.
+ *
+ * A consequência a conhecer: logo depois de importar uma fatura os dois totais
+ * ficam em zero, até que alguém edite alguma transação dela. Nenhum cálculo
+ * depende disso — o fechamento mensal soma as transações pelo domínio
+ * ({@see \App\Domain\Finance\Services\ApuradorDeFechamentoMensal}); estas
+ * colunas só alimentam a tela de faturas lado a lado.
  *
  * `amount` (o total informado da fatura) não é tocado de propósito: é
  * preenchido pelo usuário e serve de conferência contra a soma das
  * transações — divergência ali é informação, não ruído.
  *
  * Limitação conhecida: escrita em massa por query builder
- * (`Transaction::where(...)->delete()`) não dispara eventos de model e não
+ * (`Transaction::where(...)->update(...)`) não dispara eventos de model e não
  * recalcula. Quem fizer isso precisa recalcular na mão.
  */
 final class TransactionObserver
 {
-    public function created(Transaction $transaction): void
-    {
-        $this->recalcular($transaction->credit_card_bill_id);
-    }
-
     public function updated(Transaction $transaction): void
     {
         // Se a transação trocou de fatura, as duas ficaram desatualizadas.
@@ -41,13 +42,6 @@ final class TransactionObserver
         if ($anterior !== $transaction->credit_card_bill_id) {
             $this->recalcular($transaction->credit_card_bill_id);
         }
-    }
-
-    public function deleted(Transaction $transaction): void
-    {
-        // O id ainda está nos atributos do model apagado; a relação já não
-        // resolveria.
-        $this->recalcular($transaction->credit_card_bill_id);
     }
 
     private function recalcular(int|string|null $faturaId): void
