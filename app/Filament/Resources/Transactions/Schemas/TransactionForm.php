@@ -27,6 +27,8 @@ class TransactionForm
                             self::fieldCommon(),
                             self::fieldIndividual(),
                             self::fieldResponsible(),
+                            self::fieldInstallmentCurrent(),
+                            self::fieldInstallmentTotal(),
                         ])->cloneable()->addActionLabel('Add transação')
                         ->columns(3),
 
@@ -42,6 +44,8 @@ class TransactionForm
                 self::fieldCommon(),
                 self::fieldIndividual(),
                 self::fieldResponsible(),
+                self::fieldInstallmentCurrent(),
+                self::fieldInstallmentTotal(),
             ])
             ->columns(3);
 //        return $schema
@@ -52,7 +56,8 @@ class TransactionForm
 //                    ->required(),
 //                TextInput::make('description')
 //                    ->required(),
-//                TextInput::make('parcelas'),
+//                TextInput::make('installment_current'),
+//                TextInput::make('installment_total'),
 //                TextInput::make('amount')
 //                    ->required()
 //                    ->numeric(),
@@ -152,6 +157,27 @@ class TransactionForm
     }
 
     /**
+     * Parcela de um avulso parcelado. Nos itens de fatura esses campos vêm
+     * preenchidos pela importação; aqui existem para o lançamento manual.
+     * Meio preenchido (só um dos dois) é lido como "não parcelado".
+     */
+    public static function fieldInstallmentCurrent(): TextInput
+    {
+        return TextInput::make('installment_current')->label('Parcela')
+            ->numeric()
+            ->minValue(1)
+            ->helperText('Deixe vazio se não for parcelado');
+    }
+
+    public static function fieldInstallmentTotal(): TextInput
+    {
+        return TextInput::make('installment_total')->label('De (total de parcelas)')
+            ->numeric()
+            ->minValue(1)
+            ->gte('installment_current');
+    }
+
+    /**
      * @return TextInput
      */
     public static function fieldOrigin(): TextInput
@@ -159,6 +185,14 @@ class TransactionForm
         return TextInput::make('origin')->label('Origem')
             ->required(fn(Get $get): bool => $get('description') === 'Outros')
             ->visible(fn(Get $get): bool => $get('description') === 'Outros');
+    }
+
+    /**
+     * @return TextInput
+     */
+    public static function fieldOriginAlwaysVisible(): TextInput
+    {
+        return TextInput::make('origin')->label('Origem');
     }
 
     /**

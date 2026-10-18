@@ -2,11 +2,9 @@
 
 namespace App\Filament\Resources\CreditCardBills\RelationManagers;
 
-use App\Filament\Resources\CreditCardBills\Widgets\TransactionsByCategory;
 use App\Filament\Resources\Transactions\Schemas\TransactionForm;
 use App\Models\Transaction;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\DissociateBulkAction;
 use Filament\Actions\EditAction;
@@ -17,7 +15,6 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Columns\SelectColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
@@ -26,6 +23,8 @@ use Filament\Tables\Columns\Summarizers\Summarizer;
 use Filament\Tables\Columns\Summarizers\Count;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Illuminate\Support\Facades\DB;
+use Filament\Actions\BulkAction;
+use Illuminate\Database\Eloquent\Collection;
 
 class TransactionsRelationManager extends RelationManager
 {
@@ -47,9 +46,9 @@ class TransactionsRelationManager extends RelationManager
                     ->options([
                         'fixed_expense' => 'fixed_expense',
                         'pgto_de_fatura' => 'pgto_de_fatura',
+                        'variable_expense' => 'variable_expense',
                     ]),
-                //TransactionResource::fieldDescription(),
-                TransactionForm::fieldOrigin(),
+                TransactionForm::fieldOriginAlwaysVisible(),
                 TransactionForm::fieldAmount(),
                 TransactionForm::fieldTransactionDate(),
                 TransactionForm::fieldWhoPaid(),
@@ -65,7 +64,9 @@ class TransactionsRelationManager extends RelationManager
                 TextEntry::make('transaction_date')
                     ->date(),
                 TextEntry::make('description'),
-                TextEntry::make('parcelas')
+                TextEntry::make('installment_current')
+                    ->label('Parcela')
+                    ->state(fn (Transaction $record): ?string => $record->rotuloDaParcela())
                     ->placeholder('-'),
                 TextEntry::make('amount')
                     ->numeric(),
@@ -104,25 +105,24 @@ class TransactionsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table->recordUrl(null)->recordAction(null)
-            ->recordClasses(fn(Transaction $record) => match ($record->individual_expense) {
-                true => 'my-bg-primary',
-                false => '',
-            })
+//            ->recordClasses(fn(Transaction $record) => match ($record->individual_expense) {
+//                true => 'my-bg-primary',
+//                false => '',
+//            })
             ->emptyStateDescription('Depois que você salvar a primeira versão, ela aparecerá aqui.')
             ->recordTitleAttribute('description')
             ->paginated(false)
             ->columns([
                 TextColumn::make('transaction_date')->label('Data')->dateTime('d/m/Y'),
                 TextColumn::make('description')
+                    ->extraCellAttributes(fn (Transaction $record): array => $record->individual_expense ? ['class' => 'my-bg-primary'] : [])
                     ->label('Descrição')
+                    ->description(fn (Transaction $record): string => $record->origin ? $record->origin : '')
                     ->summarize(Count::make()),
-                //
-                SelectColumn::make('expense_category_id')->label('Categoria')
-                    ->disabled(function (Transaction $record) {
-                        return $record->description === 'Pagamento recebido';
-                    })
-                    ->optionsRelationship(name: 'expenseCategory', titleAttribute: 'description'),
-                TextColumn::make('parcelas'),
+                TextColumn::make('installment_current')->label('Parcela')
+                    ->badge()
+                    ->state(fn (Transaction $record): ?string => $record->rotuloDaParcela())
+                    ->placeholder('-'),
                 TextColumn::make('amount')->money('BRL')->label('Valor')
                     ->summarize(Sum::make()->query(fn(QueryBuilder $query) => $query->where('type', '!=', 'pgto_de_fatura'))->money('BRL')),
                 ToggleColumn::make('individual_expense')
@@ -167,18 +167,11 @@ class TransactionsRelationManager extends RelationManager
                                 ->value('aggregate'))
                             ->money('BRL')
                     ]),
+                TextColumn::make('expenseCategory.description')->label('Categoria')->wrap(),
             ])
             ->defaultSort(fn($query) => $query->orderBy('transaction_date', 'asc')->orderBy('id', 'asc'))
             ->filters([
                 //
-            ])
-            ->headerActions([
-                CreateAction::make()
-                    ->mutateDataUsing(function (array $data): array {
-                        $data['created_by'] = auth()->id();
-
-                        return $data;
-                    }),
             ])
             ->recordActions([
                 ViewAction::make()->hiddenLabel(),
@@ -189,6 +182,26 @@ class TransactionsRelationManager extends RelationManager
                     DissociateBulkAction::make(),
                     DeleteBulkAction::make(),
                 ]),
+                BulkAction::make('alterarStatus')
+                    ->label('Categorizar')
+                    ->icon('heroicon-o-pencil-square')
+                    ->schema([
+                        Select::make('expense_category_id')
+                            ->label('Categoria')
+                            ->relationship(name: 'expenseCategory', titleAttribute: 'description')
+                            ->required(),
+                    ])
+                    ->action(function (
+                        Collection $records,
+                        array $data,
+                    ): void {
+                        foreach ($records as $record) {
+                            $record->update([
+                                'expense_category_id' => $data['expense_category_id'],
+                            ]);
+                        }
+                    })
+                    ->deselectRecordsAfterCompletion(),
             ]);
     }
 }
