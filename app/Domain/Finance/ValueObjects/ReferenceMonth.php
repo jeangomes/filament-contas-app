@@ -61,6 +61,11 @@ final readonly class ReferenceMonth
         return $this->ano === $outro->ano && $this->mes === $outro->mes;
     }
 
+    public function ehAnteriorA(self $outro): bool
+    {
+        return [$this->ano, $this->mes] < [$outro->ano, $outro->mes];
+    }
+
     public function chave(): string
     {
         return sprintf('%04d-%02d', $this->ano, $this->mes);

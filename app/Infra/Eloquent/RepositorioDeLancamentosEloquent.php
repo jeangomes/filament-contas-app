@@ -8,13 +8,14 @@ use App\Domain\Finance\Entities\Transaction;
 use App\Domain\Finance\Repositories\RepositorioDeLancamentos;
 use App\Domain\Finance\ValueObjects\ReferenceMonth;
 use App\Models\Transaction as TransactionEloquent;
+use DateMalformedStringException;
 use DateTimeImmutable;
 use Illuminate\Contracts\Database\Query\Builder;
 
-final class RepositorioDeLancamentosEloquent implements RepositorioDeLancamentos
+final readonly class RepositorioDeLancamentosEloquent implements RepositorioDeLancamentos
 {
     public function __construct(
-        private readonly TransactionMapper $mapper = new TransactionMapper(),
+        private TransactionMapper $mapper = new TransactionMapper(),
     ) {
     }
 
@@ -60,6 +61,7 @@ final class RepositorioDeLancamentosEloquent implements RepositorioDeLancamentos
 
     /**
      * @return list<ReferenceMonth>
+     * @throws DateMalformedStringException
      */
     public function competenciasDisponiveis(): array
     {

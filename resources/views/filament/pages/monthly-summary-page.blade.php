@@ -1,44 +1,100 @@
 <x-filament-panels::page>
+    {{--
+        Estilo escrito à mão de propósito: o tema Tailwind do painel é compilado
+        pelo Vite e o build em public/build está desatualizado, então utilitário
+        novo (gap-x-6, grid-cols-4, ...) não chega ao CSS. Estas classes valem
+        sem depender de rebuild.
+    --}}
+    @push('styles')
+        <style>
+            .fechamento-card .fi-section-content { padding: 1rem; }
+
+            .fechamento-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+                gap: 0.75rem 1.5rem;
+            }
+
+            .fechamento-item { min-width: 0; }
+
+            .fechamento-rotulo {
+                font-size: 0.6875rem;
+                line-height: 1rem;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                color: rgb(107 114 128);
+            }
+
+            .fechamento-valor {
+                font-size: 1rem;
+                line-height: 1.375rem;
+                font-weight: 600;
+                font-variant-numeric: tabular-nums;
+            }
+
+            .fechamento-nota { font-size: 0.6875rem; line-height: 1rem; color: rgb(107 114 128); }
+
+            .fechamento-ok { font-size: 0.6875rem; line-height: 1rem; color: rgb(5 150 105); }
+
+            .fechamento-custo {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: baseline;
+                gap: 0.25rem 1.25rem;
+                margin-top: 0.75rem;
+                padding-top: 0.75rem;
+                border-top: 1px solid rgb(229 231 235);
+            }
+
+            .fechamento-custo-valor { font-size: 0.875rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+            .dark .fechamento-rotulo,
+            .dark .fechamento-nota { color: rgb(156 163 175); }
+            .dark .fechamento-ok { color: rgb(52 211 153); }
+            .dark .fechamento-custo { border-top-color: rgb(255 255 255 / 0.1); }
+        </style>
+    @endpush
+
     <div class="space-y-6">
         @php($ultimo = $this->ultimoFechamento)
 
         @if($ultimo)
             {{-- Resumo do fechamento mais recente --}}
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <x-filament::card>
-                    <p class="text-sm text-gray-600">Última competência</p>
-                    <p class="text-lg font-semibold">{{ $ultimo->competencia->format('m/Y') }}</p>
-                    <p class="text-xs text-gray-500">gastos de {{ $ultimo->reference_month->format('m/Y') }}</p>
-                </x-filament::card>
+            <x-filament::card class="fechamento-card">
+                <div class="fechamento-grid">
+                    <div class="fechamento-item">
+                        <p class="fechamento-rotulo">Última competência</p>
+                        <p class="fechamento-valor">{{ $ultimo->competencia->format('m/Y') }}</p>
+                        <p class="fechamento-nota">gastos de {{ $ultimo->reference_month->format('m/Y') }}</p>
+                    </div>
 
-                <x-filament::card>
-                    <p class="text-sm text-gray-600">Despesas da casa</p>
-                    <p class="text-lg font-semibold">{{ $this->formatMoney($ultimo->total_home_expenses) }}</p>
-                </x-filament::card>
+                    <div class="fechamento-item">
+                        <p class="fechamento-rotulo">Despesas da casa</p>
+                        <p class="fechamento-valor">{{ $this->formatMoney($ultimo->total_home_expenses) }}</p>
+                    </div>
 
-                <x-filament::card>
-                    <p class="text-sm text-gray-600">Total comum</p>
-                    <p class="text-lg font-semibold">{{ $this->formatMoney($ultimo->total_common_expenses) }}</p>
-                </x-filament::card>
+                    <div class="fechamento-item">
+                        <p class="fechamento-rotulo">Total comum</p>
+                        <p class="fechamento-valor">{{ $this->formatMoney($ultimo->total_common_expenses) }}</p>
+                    </div>
 
-                <x-filament::card>
-                    <p class="text-sm text-gray-600">Acerto</p>
-                    <p class="text-sm font-semibold">{{ $ultimo->balance_description }}</p>
-                    @if($ultimo->difference_paid)
-                        <p class="text-xs text-green-600">já acertado</p>
-                    @endif
-                </x-filament::card>
-            </div>
+                    <div class="fechamento-item">
+                        <p class="fechamento-rotulo">Acerto</p>
+                        <p class="fechamento-valor">{{ $ultimo->balance_description }}</p>
+                        @if($ultimo->difference_paid)
+                            <p class="fechamento-ok">já acertado</p>
+                        @endif
+                    </div>
+                </div>
 
-            {{-- Custo de vida de cada um na última competência --}}
-            <x-filament::card>
-                <h3 class="text-lg font-medium mb-4">Custo de vida — {{ $ultimo->competencia->format('m/Y') }}</h3>
-                <div class="grid grid-cols-2 gap-4">
+                {{-- Custo de vida de cada um na última competência --}}
+                <div class="fechamento-custo">
+                    <p class="fechamento-rotulo">Custo de vida — {{ $ultimo->competencia->format('m/Y') }}</p>
                     @foreach($ultimo->participantSummaries->sortBy('participant') as $participante)
-                        <div class="text-center">
-                            <p class="text-xs text-gray-500 mb-1">{{ $participante->participant->value }}</p>
-                            <p class="text-lg font-semibold">{{ $this->formatMoney($participante->living_cost) }}</p>
-                        </div>
+                        <p>
+                            <span class="fechamento-rotulo">{{ $participante->participant->value }}</span>
+                            <span class="fechamento-custo-valor">{{ $this->formatMoney($participante->living_cost) }}</span>
+                        </p>
                     @endforeach
                 </div>
             </x-filament::card>
