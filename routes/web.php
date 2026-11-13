@@ -1,7 +1,3 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-
-/*Route::get('/', function () {
-    return view('welcome');
-});*/
+// O painel Filament ocupa a raiz (AdminPanelProvider::path('/')).
