@@ -22,7 +22,6 @@ class TransactionFactory extends Factory
                 'Compra Online', 'Eletrônicos', 'Roupas', 'Serviços'
             ]),
 
-            //'parcelas' => $this->faker->optional()->randomElement(['1/1', '1/3', '2/3', '3/10']),
 
             'amount' => $this->faker->randomFloat(0, 20, 300),
 
