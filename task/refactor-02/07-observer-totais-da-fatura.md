@@ -3,6 +3,13 @@
 ## Status
 Concluída — 124 testes passando (7 novos).
 
+> **Revertido em parte, depois.** `created` e `deleted` foram removidos do
+> observer: hoje **só `updated` recalcula**. A decisão é não pagar um SUM por
+> linha inserida na importação, aceitando que os totais fiquem em zero até
+> alguém editar alguma transação da fatura. Nenhum cálculo depende disso — o
+> fechamento soma as transações pelo domínio. `TotaisDaFaturaTest` foi
+> reescrito para esse contrato. O que está abaixo descreve o estado da época.
+
 ### O bug, confirmado por teste
 `importar_transacoes_atualiza_os_totais` reproduz o caminho da importação de
 CSV (`createMany`) e **falhava antes da correção**. Agora `created`,

@@ -56,13 +56,25 @@ lista de descrições: qualquer comum avulsa é da casa. Daí vale a invariante
 `casa + comum dos cartões == total comum`, que a versão antiga (com 6
 descrições fixas) não fechava.
 
+**Parcelas.** O extrato traz a parcela como sufixo da descrição
+(`Garmin Proparts Ecomm - Parcela 3/6`). A importação extrai `N/M` para
+`installment_current`/`installment_total` e **mantém a descrição íntegra**; o
+nome da série (sem o sufixo) é derivado na leitura por
+`Parcela::descricaoDaSerie()`. Uma série é `descrição | quem pagou | total de
+parcelas`. Parcela não muda rateio nem custo de vida: é despesa inteira no mês
+dela. Histórico importado antes disso se conserta com
+`transactions:extrair-parcelas`. Detalhes e decisões em
+`task/features/parcelas.md`.
+
 # Arquitetura
 - `app/Domain/Finance/` — domínio puro: sem Eloquent, sem SQL, sem facades.
   Entidade `Transaction`, value objects (`Money`, `ReferenceMonth`,
   `MonthlyBalance`, `Acerto`, `FechamentoMensal`, `FechamentoDoParticipante`,
-  `DespesaDaCasa`), enums, e os serviços: `CalculadoraDeSaldoMensal` (rateio e
-  acerto), `CalculadoraDeCustoDeVida` e `ApuradorDeFechamentoMensal`, que
-  compõe os dois. É aqui que a regra de negócio deve ser escrita e testada.
+  `DespesaDaCasa`, `Parcela`, `Parcelamento`, `CompromissoMensal`), enums, e os
+  serviços: `CalculadoraDeSaldoMensal` (rateio e acerto),
+  `CalculadoraDeCustoDeVida` e `ApuradorDeFechamentoMensal`, que compõe os
+  dois, mais `ApuradorDeParcelamentos` (séries parceladas, à parte do
+  fechamento). É aqui que a regra de negócio deve ser escrita e testada.
 - `app/Domain/**/Repositories/` e `app/Domain/FonteDeLancamentos.php` — portas
   (interfaces) que o domínio consome.
 - `app/Infra/` — adapters: `Csv/` (importação) e `Eloquent/` (repositório +
@@ -71,9 +83,19 @@ descrições fixas) não fechava.
   domínio e persiste. Não contém regra.
 - `app/Observers/TransactionObserver.php` — mantém os totais agregados da
   fatura (`common_amount`/`individual_amount`), que são cache de exibição.
-- `app/Filament/` — UI. Duas páginas: `MonthlySummaryPage` ("Consolidado
-  Mensal", o histórico persistido) e `BillsSideBySideOverview` (faturas lado a
-  lado).
+  **Recalcula só no `updated`**: importar e apagar não disparam recálculo, para
+  não pagar um SUM por linha na importação. Logo após importar uma fatura os
+  totais ficam em zero até alguém editar alguma transação dela — o que não
+  afeta cálculo nenhum, porque o fechamento soma as transações pelo domínio.
+- `app/Filament/` — UI. O "Consolidado Mensal" (histórico persistido) é o
+  `MonthlySummaryResource`, somente leitura: listagem com as ações de
+  calcular/recalcular, widget `UltimoFechamento` no topo e página de detalhe —
+  tudo com componentes nativos, sem view Blade. O eager load das relações fica
+  em `getEloquentQuery()`, que serve à tabela e ao route binding do detalhe.
+  Duas páginas customizadas: `BillsSideBySideOverview` (faturas lado a lado) e
+  `ParcelasEmAndamento` ("Parcelas", séries parceladas e compromisso futuro —
+  projeção pura, nada persistido). São elas que ainda dependem do tema Vite
+  (`theme.css`) por usarem utilitários Tailwind nas views.
 
 # Fechamento mensal persistido
 Três tabelas, chaveadas pela **competência** (o mês do vencimento):
@@ -114,6 +136,8 @@ Dois ciclos concluídos, documentados task a task com as decisões tomadas:
   do SQL para o domínio.
 - `task/refactor-02/` — refactor 2: custo de vida, persistência normalizada do
   histórico e consolidação das telas.
+- `task/features/parcelas.md` — feature de parcelas: extração na importação,
+  backfill e a tela de acompanhamento.
 
 Pendências conhecidas:
 - O rename de colunas de `credit_card_bills` (`title_description_owner` →

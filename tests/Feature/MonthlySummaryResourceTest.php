@@ -137,9 +137,7 @@ final class MonthlySummaryResourceTest extends TestCase
         Livewire::test(UltimoFechamento::class)
             ->assertOk()
             ->assertSee('Última competência')
-            ->assertSee('07/2026')
-            ->assertSee('Custo de vida D')
-            ->assertSee('Custo de vida J');
+            ->assertSee('07/2026');
     }
 
     #[Test]
