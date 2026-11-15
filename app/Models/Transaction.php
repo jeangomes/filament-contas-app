@@ -11,6 +11,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
 
 /**
+ * @property int $credit_card_bill_id
  * @property-read CreditCardBill $creditCardBill
  * @property ?int $installment_current
  * @property ?int $installment_total

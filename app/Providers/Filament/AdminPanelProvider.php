@@ -29,7 +29,7 @@ class AdminPanelProvider extends PanelProvider
             ->path('/')
             ->login()
             ->brandName('Contas Casinha V3')
-            ->sidebarWidth('14rem')
+            ->sidebarWidth('15rem')
             ->sidebarCollapsibleOnDesktop()
             ->colors([
                 // Cor principal: Vinho / Bordô

@@ -4,8 +4,6 @@ namespace App\Filament\Resources\Transactions\Tables;
 
 use App\Models\CreditCardBill;
 use App\Models\Transaction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
@@ -23,8 +21,10 @@ class TransactionsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->recordUrl(null)
             ->columns([
                 TextColumn::make('creditCardBill.title_description_owner')->label('Fatura'),
+                TextColumn::make('creditCardBill.due_date')->label('Fatura Vcto')->date('m/Y'),
                 TextColumn::make('creditCardBill.owner_bill')->label('Dono'),
                 TextColumn::make('transaction_date')->label('Data')->dateTime('d/m/Y'),
                 TextColumn::make('description')->label('Descrição')
@@ -33,20 +33,14 @@ class TransactionsTable
                     ->badge()
                     ->state(fn (Transaction $record): ?string => $record->rotuloDaParcela())
                     ->placeholder('-'),
-                TextColumn::make('amount')->money('BRL')->label('Valor'),
+                TextColumn::make('amount')->money('BRL')->label('Valor')->sortable(),
                 TextColumn::make('who_paid')->label('Pagador'),
-                TextColumn::make('responsible_for_expense')->label('Devedor'),
                 IconColumn::make('individual_expense')->label('Individual'),
-                IconColumn::make('common_expense')
-                    ->label('Em comum')
-                    ->boolean()
-                    ->trueIcon('heroicon-o-check-badge')
-                    ->falseIcon('heroicon-o-x-mark')
             ])
             ->paginated([45])
-            //->defaultSort('id', 'desc')
-            ->defaultSort(fn($query) => $query->orderBy('credit_card_bill_id', 'desc')
-                ->orderBy('transaction_date', 'asc')->orderBy('id', 'asc'))
+            ->defaultSort('id', 'desc')
+//            ->defaultSort(fn($query) => $query->orderBy('credit_card_bill_id', 'desc')
+//                ->orderBy('transaction_date', 'asc')->orderBy('id', 'asc'))
             ->filtersFormColumns(3)
             ->filters([
                 Filter::make('description')
@@ -124,12 +118,14 @@ class TransactionsTable
                     ->multiple(),
             ])
             ->recordActions([
-                EditAction::make()->hiddenLabel(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
+                EditAction::make()->hiddenLabel()->hidden(function (Transaction $record) {
+                    return $record->credit_card_bill_id !== null;
+                }),
             ]);
+//            ->toolbarActions([
+//                BulkActionGroup::make([
+//                    DeleteBulkAction::make(),
+//                ]),
+//            ]);
     }
 }

@@ -144,7 +144,7 @@ class TransactionsRelationManager extends RelationManager
                             ->money('BRL'),
                     ]),
                 IconColumn::make('common_expense')
-                    ->label('Em comum')
+                    ->label('Comum')
                     ->boolean()
                     ->trueIcon('heroicon-o-check-badge')
                     ->falseIcon('heroicon-o-x-mark')

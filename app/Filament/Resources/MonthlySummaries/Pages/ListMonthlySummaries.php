@@ -31,6 +31,7 @@ class ListMonthlySummaries extends ListRecords
     protected static string $resource = MonthlySummaryResource::class;
 
     protected static ?string $title = 'Consolidado Mensal';
+    protected ?string $subheading = 'Calcular e consolidar o fechamento mensal';
 
     private FechamentoMensalService $fechamento;
 

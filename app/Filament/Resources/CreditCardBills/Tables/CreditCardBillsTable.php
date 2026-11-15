@@ -16,6 +16,7 @@ class CreditCardBillsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->recordUrl(null)
             ->columns([
                 TextColumn::make('reference_date_computed')
                     ->label('Referência')
@@ -67,7 +68,7 @@ class CreditCardBillsTable
                 //
             ])
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()->hiddenLabel(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
