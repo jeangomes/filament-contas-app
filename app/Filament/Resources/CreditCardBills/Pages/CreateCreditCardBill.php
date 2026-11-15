@@ -16,6 +16,7 @@ class CreateCreditCardBill extends CreateRecord
 {
     protected static string $resource = CreditCardBillResource::class;
     protected ?bool $hasDatabaseTransactions = true;
+    protected static bool $canCreateAnother = false;
 
     protected function afterCreate(): void
     {
