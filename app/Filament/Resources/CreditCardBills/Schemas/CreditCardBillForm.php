@@ -27,7 +27,7 @@ class CreditCardBillForm
                         'D' => 'D',
                         'J' => 'J',
                     ]),
-                Money::make('amount')->label('Valor')
+                Money::make('amount')->label('Valor')->decimalInput()
                     ->required(),
                 DatePicker::make('due_date')->label('Data de vencimento da fatura')
                     ->required(),
