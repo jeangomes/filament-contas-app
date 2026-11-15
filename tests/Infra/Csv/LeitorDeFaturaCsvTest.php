@@ -99,6 +99,41 @@ final class LeitorDeFaturaCsvTest extends TestCase
         $this->assertSame(-282551, $lancamento->amount()->centavos());
     }
 
+    #[Test]
+    public function importa_parcela_do_titulo_preservando_a_descricao(): void
+    {
+        $this->escrever(
+            "date,title,amount\n"
+            . "2026-08-04,Garmin Proparts Ecomm - Parcela 3/6,\"411,50\"\n"
+            . "2026-02-04,EBW*NuViagens - NuPay - Parcela 2/3,456.85\n"
+        );
+
+        [$garmin, $nuviagens] = $this->leitor(Participant::J, ExpenseScope::Individual)->obter();
+
+        $this->assertSame('Garmin Proparts Ecomm - Parcela 3/6', $garmin->description());
+        $this->assertSame('3/6', $garmin->parcela()->rotulo());
+        $this->assertSame('Garmin Proparts Ecomm', $garmin->descricaoDaSerie());
+
+        // O hífen no meio da descrição não pode ser confundido com o separador
+        // da parcela.
+        $this->assertSame('2/3', $nuviagens->parcela()->rotulo());
+        $this->assertSame('EBW*NuViagens - NuPay', $nuviagens->descricaoDaSerie());
+    }
+
+    #[Test]
+    public function linha_sem_parcela_vem_sem_parcela(): void
+    {
+        $this->escrever(
+            "date,title,amount\n"
+            . "2026-06-08,Sorveteria Alex,\"43,00\"\n"
+        );
+
+        [$lancamento] = $this->leitor(Participant::D, ExpenseScope::Comum)->obter();
+
+        $this->assertFalse($lancamento->ehParcelada());
+        $this->assertNull($lancamento->parcela());
+    }
+
     private function escrever(string $conteudo): void
     {
         file_put_contents($this->arquivo, $conteudo);

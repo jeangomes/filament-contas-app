@@ -83,6 +83,28 @@ final class RepositorioDeLancamentosEloquentTest extends TestCase
         $this->assertSame(['2026-01', '2026-04'], $chaves);
     }
 
+    #[Test]
+    public function traz_so_os_parcelados_com_a_competencia_da_fatura(): void
+    {
+        $fatura = $this->fatura('2026-08-11');
+
+        $this->lancamento([
+            'transaction_date' => '2026-07-04',
+            'description' => 'Decolar Com - Parcela 2/12',
+            'installment_current' => 2,
+            'installment_total' => 12,
+        ], $fatura);
+
+        $this->lancamento(['description' => 'Deezerbr Deezer'], $fatura);
+
+        $parcelados = $this->repositorio->parcelados();
+
+        $this->assertCount(1, $parcelados);
+        $this->assertSame('2/12', $parcelados[0]->parcela()->rotulo());
+        // Competência é a do vencimento da fatura, não a da compra.
+        $this->assertSame('2026-08', $parcelados[0]->referenceMonth()->chave());
+    }
+
     private function fatura(string $vencimento): CreditCardBill
     {
         return CreditCardBill::query()->create([

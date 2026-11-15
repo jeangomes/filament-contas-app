@@ -9,17 +9,19 @@ use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
- * Os totais agregados da fatura são cache de exibição: precisam acompanhar
- * qualquer mexida nas transações, não só a edição manual.
+ * Os totais agregados da fatura são cache de exibição, recalculado **só na
+ * edição** de uma transação: importar e apagar não disparam recálculo, para
+ * não pagar um SUM por linha na importação de uma fatura inteira.
  */
 final class TotaisDaFaturaTest extends TestCase
 {
     use RefreshDatabase;
 
     #[Test]
-    public function importar_transacoes_atualiza_os_totais(): void
+    public function importar_transacoes_nao_recalcula_os_totais(): void
     {
-        // Este é o caminho da importação de CSV — o que o bug deixava parado.
+        // Este é o caminho da importação de CSV: os totais ficam parados até
+        // alguém editar algum lançamento da fatura.
         $fatura = $this->fatura();
 
         $fatura->transactions()->createMany([
@@ -29,19 +31,43 @@ final class TotaisDaFaturaTest extends TestCase
         ]);
 
         $fatura->refresh();
-        $this->assertSame('150.00', $fatura->common_amount);
-        $this->assertSame('30.00', $fatura->individual_amount);
+        $this->assertSame('0.00', $fatura->common_amount);
+        $this->assertSame('0.00', $fatura->individual_amount);
     }
 
     #[Test]
-    public function apagar_transacao_atualiza_os_totais(): void
+    public function editar_qualquer_transacao_acerta_a_fatura_toda(): void
+    {
+        // É por aqui que os totais de uma fatura recém-importada se acertam:
+        // o recálculo é da fatura inteira, não só da linha editada.
+        $fatura = $this->fatura();
+        $fatura->transactions()->createMany([
+            $this->atributos(['amount' => '100.00']),
+            $this->atributos(['amount' => '50.00']),
+        ]);
+
+        $fatura->transactions()->first()->update(['description' => 'Mercado']);
+
+        $this->assertSame('150.00', $fatura->refresh()->common_amount);
+    }
+
+    #[Test]
+    public function apagar_transacao_nao_recalcula_os_totais(): void
     {
         $fatura = $this->fatura();
-        $fatura->transactions()->create($this->atributos(['amount' => '100.00']));
+        $lancamento = $fatura->transactions()->create($this->atributos(['amount' => '100.00']));
         $descartada = $fatura->transactions()->create($this->atributos(['amount' => '40.00']));
+
+        // Uma edição antes, para os totais saírem do zero.
+        $lancamento->update(['description' => 'Mercado']);
+        $this->assertSame('140.00', $fatura->refresh()->common_amount);
 
         $descartada->delete();
 
+        // O apagado continua contado: só uma edição posterior acerta.
+        $this->assertSame('140.00', $fatura->refresh()->common_amount);
+
+        $lancamento->update(['description' => 'Mercado do mês']);
         $this->assertSame('100.00', $fatura->refresh()->common_amount);
     }
 
@@ -78,6 +104,8 @@ final class TotaisDaFaturaTest extends TestCase
             $this->atributos(['amount' => '900.00', 'type' => 'pgto_de_fatura']),
         ]);
 
+        $this->dispararRecalculo($fatura);
+
         $this->assertSame('100.00', $fatura->refresh()->common_amount);
     }
 
@@ -87,6 +115,8 @@ final class TotaisDaFaturaTest extends TestCase
         // Divergência entre o informado e a soma é informação útil.
         $fatura = $this->fatura(['amount' => '359.00']);
         $fatura->transactions()->create($this->atributos(['amount' => '125.00']));
+
+        $this->dispararRecalculo($fatura);
 
         $this->assertSame(359.0, $fatura->refresh()->amount);
         $this->assertSame('125.00', $fatura->common_amount);
@@ -101,6 +131,16 @@ final class TotaisDaFaturaTest extends TestCase
         $lancamento->delete();
 
         $this->assertSame(0, CreditCardBill::query()->count());
+    }
+
+    /**
+     * O recálculo só acontece no `updated`, então quem quer conferir os totais
+     * depois de uma inserção precisa editar alguma transação da fatura — é o
+     * que o usuário faz na tela.
+     */
+    private function dispararRecalculo(CreditCardBill $fatura): void
+    {
+        $fatura->transactions()->first()->update(['description' => 'Editado']);
     }
 
     /**

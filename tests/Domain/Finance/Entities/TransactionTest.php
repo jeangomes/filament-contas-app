@@ -7,6 +7,7 @@ use App\Domain\Finance\Enums\ExpenseScope;
 use App\Domain\Finance\Enums\Participant;
 use App\Domain\Finance\Enums\TransactionType;
 use App\Domain\Finance\ValueObjects\Money;
+use App\Domain\Finance\ValueObjects\Parcela;
 use App\Domain\Finance\ValueObjects\ReferenceMonth;
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\Test;
@@ -122,22 +123,47 @@ final class TransactionTest extends TestCase
         $this->assertTrue($this->lancamento(deFatura: true)->ehDeFatura());
     }
 
+    #[Test]
+    public function lancamento_sem_parcela_tem_parcela_nula(): void
+    {
+        $lancamento = $this->lancamento();
+
+        $this->assertNull($lancamento->parcela());
+        $this->assertFalse($lancamento->ehParcelada());
+    }
+
+    #[Test]
+    public function descricao_da_serie_remove_o_sufixo_de_parcela(): void
+    {
+        $lancamento = $this->lancamento(
+            description: 'Garmin Proparts Ecomm - Parcela 3/6',
+            parcela: Parcela::de(3, 6),
+        );
+
+        $this->assertTrue($lancamento->ehParcelada());
+        $this->assertSame('Garmin Proparts Ecomm - Parcela 3/6', $lancamento->description());
+        $this->assertSame('Garmin Proparts Ecomm', $lancamento->descricaoDaSerie());
+    }
+
     private function lancamento(
         Participant $whoPaid = Participant::D,
         ExpenseScope $scope = ExpenseScope::Comum,
         ?Participant $responsible = null,
         TransactionType $type = TransactionType::FixedExpense,
         bool $deFatura = false,
+        string $description = 'Lançamento de teste',
+        ?Parcela $parcela = null,
     ): Transaction {
         return new Transaction(
             date: new DateTimeImmutable('2026-01-15'),
-            description: 'Lançamento de teste',
+            description: $description,
             amount: Money::emCentavos(1000),
             whoPaid: $whoPaid,
             scope: $scope,
             responsible: $responsible,
             type: $type,
             deFatura: $deFatura,
+            parcela: $parcela,
         );
     }
 }

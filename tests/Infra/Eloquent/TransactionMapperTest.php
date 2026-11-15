@@ -117,6 +117,73 @@ final class TransactionMapperTest extends TestCase
         $this->assertFalse($this->mapper->paraDominio($this->model())->ehDeFatura());
     }
 
+    #[Test]
+    public function mapeia_colunas_de_parcela_para_o_value_object(): void
+    {
+        $lancamento = $this->mapper->paraDominio($this->model([
+            'description' => 'Garmin Proparts Ecomm - Parcela 3/6',
+            'installment_current' => 3,
+            'installment_total' => 6,
+        ]));
+
+        $this->assertTrue($lancamento->ehParcelada());
+        $this->assertSame('3/6', $lancamento->parcela()->rotulo());
+        $this->assertSame('Garmin Proparts Ecomm', $lancamento->descricaoDaSerie());
+    }
+
+    #[Test]
+    public function colunas_de_parcela_nulas_produzem_parcela_nula(): void
+    {
+        $lancamento = $this->mapper->paraDominio($this->model());
+
+        $this->assertNull($lancamento->parcela());
+    }
+
+    #[Test]
+    public function apenas_uma_coluna_de_parcela_preenchida_produz_parcela_nula(): void
+    {
+        // Sem o total não dá para dizer se a série acabou; meia parcela não é
+        // parcela. A descrição ainda traz o sufixo, mas o mapper não reparseia.
+        $lancamento = $this->mapper->paraDominio($this->model([
+            'description' => 'Garmin Proparts Ecomm - Parcela 3/6',
+            'installment_current' => 3,
+            'installment_total' => null,
+        ]));
+
+        $this->assertNull($lancamento->parcela());
+    }
+
+    #[Test]
+    public function para_atributos_grava_as_colunas_de_parcela(): void
+    {
+        $lancamento = $this->mapper->paraDominio($this->model([
+            'description' => 'Decolar Com - Parcela 2/12',
+            'amount' => '908.10',
+            'who_paid' => 'J',
+            'installment_current' => 2,
+            'installment_total' => 12,
+        ]));
+
+        $atributos = $this->mapper->paraAtributos($lancamento);
+
+        $this->assertSame('Decolar Com - Parcela 2/12', $atributos['description']);
+        $this->assertSame('908.10', $atributos['amount']);
+        $this->assertSame('J', $atributos['who_paid']);
+        $this->assertSame(2, $atributos['installment_current']);
+        $this->assertSame(12, $atributos['installment_total']);
+    }
+
+    #[Test]
+    public function para_atributos_de_lancamento_sem_parcela_deixa_as_colunas_nulas(): void
+    {
+        $atributos = $this->mapper->paraAtributos(
+            $this->mapper->paraDominio($this->model()),
+        );
+
+        $this->assertNull($atributos['installment_current']);
+        $this->assertNull($atributos['installment_total']);
+    }
+
     /**
      * Monta o model como ele chega do repositório: atributos brutos e a
      * relação já carregada (o repositório sempre faz eager load, então o
@@ -140,6 +207,8 @@ final class TransactionMapperTest extends TestCase
             'responsible_for_expense' => null,
             'who_paid' => 'D',
             'type' => 'fixed_expense',
+            'installment_current' => null,
+            'installment_total' => null,
         ], $atributos), sync: true);
 
         return $model;
