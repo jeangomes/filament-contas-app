@@ -46,6 +46,18 @@ final class ReferenceMonthTest extends TestCase
     }
 
     #[Test]
+    public function volta_para_o_mes_anterior_inclusive_virada_de_ano(): void
+    {
+        $this->assertTrue(
+            ReferenceMonth::fromString('2027-01')->mesAnterior()->equals(ReferenceMonth::fromString('2026-12')),
+        );
+
+        $this->assertTrue(
+            ReferenceMonth::fromString('2026-03')->mesAnterior()->equals(ReferenceMonth::fromString('2026-02')),
+        );
+    }
+
+    #[Test]
     public function resolve_a_partir_de_uma_data(): void
     {
         $mes = ReferenceMonth::fromDate(new DateTimeImmutable('2026-03-15'));

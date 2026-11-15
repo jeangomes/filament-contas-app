@@ -29,7 +29,6 @@ use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Livewire\Attributes\Computed;
 use UnitEnum;
 
 /**
@@ -76,7 +75,7 @@ class ParcelasEmAndamento extends Page implements HasTable
     public function content(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make(fn (): string => 'Posição em ' . $this->formatCompetencia($this->competenciaAtual))
+            Section::make(fn (): string => 'Posição em ' . $this->formatCompetencia($this->competenciaAtual()))
                 ->description('Considera os filtros da tabela abaixo.')
                 ->columns(['default' => 1, 'sm' => 2, 'lg' => 4])
                 ->schema([
@@ -217,7 +216,7 @@ class ParcelasEmAndamento extends Page implements HasTable
      */
     public function compromissos(): array
     {
-        return $this->apurador->projetar($this->parcelamentos(), $this->competenciaAtual);
+        return $this->apurador->projetar($this->parcelamentos(), $this->competenciaAtual());
     }
 
     public function totalComprometido(): Money
@@ -239,8 +238,7 @@ class ParcelasEmAndamento extends Page implements HasTable
         return $this->todasAsSeries ??= $this->apurador->apurar($this->repositorio->parcelados());
     }
 
-    #[Computed]
-    public function competenciaAtual(): ReferenceMonth
+    private function competenciaAtual(): ReferenceMonth
     {
         return ReferenceMonth::fromDate(new DateTimeImmutable('today'));
     }
@@ -251,7 +249,7 @@ class ParcelasEmAndamento extends Page implements HasTable
     private function paraLinha(Parcelamento $serie): array
     {
         $quitada = ! $serie->emAndamento();
-        $defasada = $serie->defasadaEm($this->competenciaAtual);
+        $defasada = $serie->defasadaEm($this->competenciaAtual());
 
         return [
             'key' => $serie->chave(),
@@ -292,7 +290,7 @@ class ParcelasEmAndamento extends Page implements HasTable
     {
         return count(array_filter(
             $this->emAndamento(),
-            fn (Parcelamento $serie): bool => $serie->defasadaEm($this->competenciaAtual),
+            fn (Parcelamento $serie): bool => $serie->defasadaEm($this->competenciaAtual()),
         ));
     }
 

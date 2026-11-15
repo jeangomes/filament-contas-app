@@ -46,6 +46,13 @@ final readonly class ReferenceMonth
             : new self($this->ano, $this->mes + 1);
     }
 
+    public function mesAnterior(): self
+    {
+        return $this->mes === 1
+            ? new self($this->ano - 1, 12)
+            : new self($this->ano, $this->mes - 1);
+    }
+
     public function ano(): int
     {
         return $this->ano;

@@ -13,6 +13,9 @@
   (ver `phpunit.xml`), então **nada de SQL específico do MySQL** em código que
   precise ser testado: `DATE_FORMAT`/`IF` quebram os testes. Use
   `whereYear`/`whereMonth`/`COALESCE`.
+- Os testes rodam com `APP_LOCALE=pt_BR` (`phpunit.xml`), igual ao `.env`:
+  `->money('BRL')` sai `R$ 150,00` como na tela, então dá para afirmar o
+  valor formatado.
 - Banco real: MySQL no container `contas-casinha-db` (`laravel_db`).
 
 # O que o sistema faz
@@ -92,10 +95,29 @@ dela. Histórico importado antes disso se conserta com
   calcular/recalcular, widget `UltimoFechamento` no topo e página de detalhe —
   tudo com componentes nativos, sem view Blade. O eager load das relações fica
   em `getEloquentQuery()`, que serve à tabela e ao route binding do detalhe.
-  Duas páginas customizadas: `BillsSideBySideOverview` (faturas lado a lado) e
-  `ParcelasEmAndamento` ("Parcelas", séries parceladas e compromisso futuro —
-  projeção pura, nada persistido). São elas que ainda dependem do tema Vite
-  (`theme.css`) por usarem utilitários Tailwind nas views.
+  `ParcelasEmAndamento` ("Parcelas") é Page, não Resource, porque as séries
+  não têm model (projeção pura, nada persistido): `content()` com resumo,
+  tabela Filament alimentada pelo domínio via `->records()` e projeção em
+  infolist — também sem Blade. Os filtros da tabela valem para os três blocos.
+  Atenção: **não use `#[Computed]` para nada que dependa de filtro de
+  tabela.** O filtro "deferred" e o clique em Aplicar chegam na mesma
+  request; algo lê o valor antes de `applyTableFilters()`, o cache guarda o
+  resultado do filtro antigo e a tela só responde no segundo clique. Cacheie
+  só o que independe do filtro (consulta + apuração, em propriedade privada)
+  e filtre a cada leitura. `filterTable()` nos testes não pega isso — use
+  `->update(calls: [applyTableFilters], updates: [tableDeferredFilters...])`.
+  Padrão do projeto: **não usar `#[Computed]` nas páginas/widgets.** Além
+  da armadilha acima, ele só usa cache lido como propriedade mágica
+  (`$this->x`), que a IDE não enxerga. Use método privado comum e, se a
+  consulta for cara, cache explícito em propriedade privada (o Livewire não
+  serializa privadas, então vale por request) — ver `LancamentosDaFatura`.
+  `BillsSideBySideOverview` ("Faturas Mensais") guarda só o mês (`#[Url]`,
+  `Y-m`) e monta um `LancamentosDaFatura` (`TableWidget` em
+  `app/Filament/Pages/Widgets/`, fora de `Filament/Widgets` para não cair no
+  Dashboard) por participante, com chave que inclui o mês. Os totais são
+  `Sum` sobre as transações, não o cache `common_amount`/`individual_amount`.
+  Nenhuma página tem mais view Blade: o tema Vite (`theme.css`) só carrega os
+  ajustes de CSS das tabelas e pode virar CSS puro via `FilamentAsset`.
 
 # Fechamento mensal persistido
 Três tabelas, chaveadas pela **competência** (o mês do vencimento):
