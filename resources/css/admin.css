@@ -1,0 +1,39 @@
+/*
+ * Ajustes do painel em CSS puro — sem Vite/Tailwind.
+ *
+ * Registrado em AppServiceProvider::boot() via FilamentAsset e publicado em
+ * public/css/app/admin.css por `php artisan filament:assets` (roda sozinho
+ * no `composer install/update`, via `filament:upgrade`).
+ *
+ * Só seletores de "CSS hook" do Filament (`fi-*`) e classes próprias. Cores
+ * pelas variáveis do painel (`--gray-*`), que seguem o `->colors()` do
+ * AdminPanelProvider.
+ */
+
+/* Tabelas compactas: sem respiro vertical nas células. */
+.fi-ta-cell,
+.fi-ta-cell div {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* Divisórias verticais entre colunas (era `divide-x divide-gray-200`). */
+.fi-ta-table > thead > tr > :not(:last-child),
+.fi-ta-row > :not(:last-child) {
+    border-inline-end: 1px solid var(--gray-200);
+}
+
+.dark .fi-ta-table > thead > tr > :not(:last-child),
+.dark .fi-ta-row > :not(:last-child) {
+    border-inline-end-color: rgb(255 255 255 / 0.05);
+}
+
+/*
+ * Destaque de célula: fatura do mês atual (CreditCardBillsTable) e
+ * lançamento individual (TransactionsRelationManager).
+ */
+.my-bg-primary {
+    background-color: #00ffff;
+}

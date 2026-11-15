@@ -116,8 +116,14 @@ dela. Histórico importado antes disso se conserta com
   `app/Filament/Pages/Widgets/`, fora de `Filament/Widgets` para não cair no
   Dashboard) por participante, com chave que inclui o mês. Os totais são
   `Sum` sobre as transações, não o cache `common_amount`/`individual_amount`.
-  Nenhuma página tem mais view Blade: o tema Vite (`theme.css`) só carrega os
-  ajustes de CSS das tabelas e pode virar CSS puro via `FilamentAsset`.
+- **Front sem build.** Não há Vite, Tailwind compilado, `package.json` nem
+  Node no projeto, e nenhuma página tem view Blade. O CSS próprio é
+  `resources/css/admin.css`, puro, registrado com `FilamentAsset` em
+  `AppServiceProvider::boot()` e publicado em `public/css/app/` pelo
+  `php artisan filament:assets` (roda no `composer install/update`). Depois de
+  editar o CSS, rode esse comando. Use só hooks `fi-*`, classes próprias e as
+  variáveis do painel (`var(--gray-200)`): **classe utilitária do Tailwind que
+  o Filament não usa não existe** no CSS carregado, e `@apply` não funciona.
 
 # Fechamento mensal persistido
 Três tabelas, chaveadas pela **competência** (o mês do vencimento):

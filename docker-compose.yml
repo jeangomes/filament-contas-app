@@ -51,19 +51,6 @@ services:
             - "3306:3306"
         networks:
             - casinha-network
-    node:
-      # Usa a imagem Node.js oficial (versão que você precisa)
-      image: node:24-alpine
-      container_name: laravel_node_assets
-      # Define o diretório de trabalho onde o package.json está
-      working_dir: /var/www/html
-      volumes:
-        - .:/var/www/html # Mapeia o diretório raiz do projeto Laravel
-        # Impede que o volume local sobrescreva o node_modules do container
-        - /var/www/html/node_modules
-      # O comando padrão deve ser algo que espere um input (como sleep)
-      # ou pode ser omitido, pois você executará comandos manualmente.
-      command: sleep infinity
 
 # Define the network and persistent volumes
 networks:

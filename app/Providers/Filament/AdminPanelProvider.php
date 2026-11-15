@@ -71,10 +71,9 @@ class AdminPanelProvider extends PanelProvider
                 // Informações: Âmbar / Laranja Queimado
                 'info' => Color::Amber,
 
-                // Tons neutros: Grafite / Slate (Representando o fundo misterioso de Escorpião)
+                // Tons neutros: Grafite / Slate
                 'gray' => Color::Slate,
             ])
-            ->viteTheme('resources/css/filament/admin/theme.css')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([

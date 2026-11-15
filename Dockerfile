@@ -1,4 +1,4 @@
-FROM php:8.4-fpm
+FROM php:8.5.12-fpm
 
 # Arguments for user/group IDs to match your host system (optional, for permissions)
 # To find your current user's UID/GID, run 'id -u' and 'id -g' in your terminal
@@ -15,9 +15,7 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     zip \
     unzip \
-    libicu-dev \
-    nodejs \
-    npm
+    libicu-dev
 
 # Clear cache
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*

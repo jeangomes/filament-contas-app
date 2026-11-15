@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Domain\Finance\Repositories\RepositorioDeLancamentos;
 use App\Infra\Eloquent\RepositorioDeLancamentosEloquent;
+use Filament\Support\Assets\Css;
+use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\ServiceProvider;
 
@@ -30,5 +32,11 @@ class AppServiceProvider extends ServiceProvider
         Model::preventAccessingMissingAttributes();
         Model::preventSilentlyDiscardingAttributes();
         Model::preventLazyLoading(! $this->app->isProduction());
+
+        // CSS puro do painel, sem build: publicado em public/css/app/ pelo
+        // `php artisan filament:assets`.
+        FilamentAsset::register([
+            Css::make('admin', resource_path('css/admin.css')),
+        ]);
     }
 }
