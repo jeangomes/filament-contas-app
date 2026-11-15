@@ -5,8 +5,6 @@ namespace App\Filament\Resources\CreditCardBills\RelationManagers;
 use App\Filament\Resources\Transactions\Schemas\TransactionForm;
 use App\Models\Transaction;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\DissociateBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
@@ -179,8 +177,8 @@ class TransactionsRelationManager extends RelationManager
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DissociateBulkAction::make(),
-                    DeleteBulkAction::make(),
+                    //DissociateBulkAction::make(),
+                    //DeleteBulkAction::make(),
                 ]),
                 BulkAction::make('alterarStatus')
                     ->label('Categorizar')
