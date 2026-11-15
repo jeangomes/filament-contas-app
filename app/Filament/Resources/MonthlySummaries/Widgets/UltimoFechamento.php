@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\MonthlySummaries\Widgets;
 
-use App\Domain\Finance\Enums\Participant;
 use App\Models\MonthlySummary;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -27,7 +26,6 @@ class UltimoFechamento extends StatsOverviewWidget
     protected function getStats(): array
     {
         $ultimo = MonthlySummary::query()
-            ->with('participantSummaries')
             ->orderByDesc('competencia')
             ->first();
 
@@ -46,25 +44,12 @@ class UltimoFechamento extends StatsOverviewWidget
             Stat::make('Acerto', new HtmlString($ultimo->balance_description))
                 ->description($ultimo->difference_paid ? 'já acertado' : 'em aberto')
                 ->color($ultimo->settlement_payer === null ? 'success' : 'warning'),
-
-            //$this->custoDeVida($ultimo, Participant::D),
-            //$this->custoDeVida($ultimo, Participant::J),
         ];
     }
 
     /** Re-renderiza; os stats são lidos de novo do banco. */
     #[On(self::EVENTO_ATUALIZADO)]
     public function atualizar(): void {}
-
-    private function custoDeVida(MonthlySummary $fechamento, Participant $participante): Stat
-    {
-        return Stat::make(
-            'Custo de vida '.$participante->value,
-            $this->moeda($fechamento->participantSummary($participante)?->living_cost),
-        )
-            ->description('competência ' . $fechamento->competencia->format('m/Y'))
-            ->color('success');
-    }
 
     private function moeda(string|float|int|null $valor): string
     {
