@@ -22,6 +22,8 @@ use Illuminate\Support\Carbon;
  * @property Participant|null $settlement_payer
  * @property bool             $difference_paid
  * @property Carbon|null      $calculated_at
+ * @property-read $reference_month
+ * @property-read $balance_description
  */
 class MonthlySummary extends Model
 {
@@ -94,7 +96,7 @@ class MonthlySummary extends Model
                     return 'Contas em dia';
                 }
 
-                return "{$this->settlement_payer->value} deve pagar R$ $this->formatted_settlement";
+                return "{$this->settlement_payer->value} deve pagar <br/> R$ $this->formatted_settlement";
             },
         );
     }

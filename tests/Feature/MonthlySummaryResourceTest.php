@@ -4,7 +4,10 @@ namespace Tests\Feature;
 
 use App\Domain\Finance\Enums\Participant;
 use App\Domain\Finance\ValueObjects\ReferenceMonth;
-use App\Filament\Pages\MonthlySummaryPage;
+use App\Filament\Resources\MonthlySummaries\MonthlySummaryResource;
+use App\Filament\Resources\MonthlySummaries\Pages\ListMonthlySummaries;
+use App\Filament\Resources\MonthlySummaries\Pages\ViewMonthlySummary;
+use App\Filament\Resources\MonthlySummaries\Widgets\UltimoFechamento;
 use App\Models\MonthlySummary;
 use App\Models\Transaction;
 use App\Models\User;
@@ -16,7 +19,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
- * A página só lê o que foi persistido, mas lê através de relações e
+ * O Consolidado Mensal só lê o que foi persistido, mas lê através de relações e
  * acessores — e o projeto roda com preventLazyLoading()/
  * preventAccessingMissingAttributes(). Renderizar de verdade é o que pega
  * coluna que sumiu e consulta faltando.
@@ -25,7 +28,7 @@ use Tests\TestCase;
  * pelo middleware do painel. Estes testes cobrem renderização e ações, NÃO a
  * autorização de acesso (que é do painel, via canAccessPanel).
  */
-final class MonthlySummaryPageTest extends TestCase
+final class MonthlySummaryResourceTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -39,7 +42,7 @@ final class MonthlySummaryPageTest extends TestCase
     #[Test]
     public function renderiza_com_a_tabela_vazia(): void
     {
-        Livewire::test(MonthlySummaryPage::class)->assertOk();
+        Livewire::test(ListMonthlySummaries::class)->assertOk();
     }
 
     #[Test]
@@ -47,7 +50,7 @@ final class MonthlySummaryPageTest extends TestCase
     {
         $this->fecharUmMesComDados();
 
-        Livewire::test(MonthlySummaryPage::class)
+        Livewire::test(ListMonthlySummaries::class)
             ->assertOk()
             ->assertSee('07/2026')          // competência
             ->assertSee('D deve pagar');    // acerto, via acessor do model
@@ -58,7 +61,7 @@ final class MonthlySummaryPageTest extends TestCase
     {
         Transaction::query()->create($this->atributos());
 
-        Livewire::test(MonthlySummaryPage::class)
+        Livewire::test(ListMonthlySummaries::class)
             ->callAction('calcular_mes', ['competencia' => '2026-07'])
             ->assertHasNoActionErrors();
 
@@ -71,7 +74,7 @@ final class MonthlySummaryPageTest extends TestCase
         $this->fecharUmMesComDados();
         MonthlySummary::query()->sole()->update(['difference_paid' => true]);
 
-        Livewire::test(MonthlySummaryPage::class)
+        Livewire::test(ListMonthlySummaries::class)
             ->callAction('recalcular_tudo')
             ->assertHasNoActionErrors();
 
@@ -86,7 +89,7 @@ final class MonthlySummaryPageTest extends TestCase
 
         $custoDeD = $resumo->participantSummary(Participant::D)->living_cost;
 
-        Livewire::test(MonthlySummaryPage::class)
+        Livewire::test(ListMonthlySummaries::class)
             ->assertOk()
             ->assertSee(number_format((float) $custoDeD, 2, ',', '.'));
     }
@@ -110,12 +113,78 @@ final class MonthlySummaryPageTest extends TestCase
         );
     }
 
+    #[Test]
+    public function o_detalhe_mostra_participantes_e_totais(): void
+    {
+        $resumo = $this->fecharUmMesComDados();
+        $custoDeJ = $resumo->participantSummary(Participant::J)->living_cost;
+
+        // Rota de verdade do route binding: getEloquentQuery() precisa trazer
+        // as relações, senão preventLazyLoading() estoura aqui.
+        Livewire::test(ViewMonthlySummary::class, ['record' => $resumo->getKey()])
+            ->assertOk()
+            ->assertSee('Fechamento de 07/2026')
+            ->assertSee('Por participante')
+            ->assertSee('Despesas da casa')
+            ->assertSee(number_format((float) $custoDeJ, 2, ',', '.'));
+    }
+
+    #[Test]
+    public function o_widget_mostra_a_competencia_mais_recente(): void
+    {
+        $this->fecharMeses(['2026-06', '2026-07']);
+
+        Livewire::test(UltimoFechamento::class)
+            ->assertOk()
+            ->assertSee('Última competência')
+            ->assertSee('07/2026')
+            ->assertSee('Custo de vida D')
+            ->assertSee('Custo de vida J');
+    }
+
+    #[Test]
+    public function sem_fechamento_o_widget_fica_vazio(): void
+    {
+        Livewire::test(UltimoFechamento::class)
+            ->assertOk()
+            ->assertDontSee('Última competência');
+    }
+
+    #[Test]
+    public function fechamento_nao_se_cria_nem_se_edita_pela_tela(): void
+    {
+        $resumo = $this->fecharUmMesComDados();
+
+        $this->assertFalse(MonthlySummaryResource::canCreate());
+        $this->assertFalse(MonthlySummaryResource::canEdit($resumo));
+        $this->assertFalse(MonthlySummaryResource::canDelete($resumo));
+    }
+
+    #[Test]
+    public function calcular_avisa_o_widget_para_atualizar(): void
+    {
+        Transaction::query()->create($this->atributos());
+
+        Livewire::test(ListMonthlySummaries::class)
+            ->callAction('calcular_mes', ['competencia' => '2026-07'])
+            ->assertDispatched(UltimoFechamento::EVENTO_ATUALIZADO);
+    }
+
+    #[Test]
+    public function como_funciona_abre_a_explicacao(): void
+    {
+        Livewire::test(ListMonthlySummaries::class)
+            ->mountAction('como_funciona')
+            ->assertActionMounted('como_funciona')
+            ->assertMountedActionModalSee(['Custo de vida × saldo', 'não se somam']);
+    }
+
     private function consultasParaRenderizar(): int
     {
         DB::flushQueryLog();
         DB::enableQueryLog();
 
-        Livewire::test(MonthlySummaryPage::class)->assertOk();
+        Livewire::test(ListMonthlySummaries::class)->assertOk();
 
         $total = count(DB::getQueryLog());
         DB::disableQueryLog();
