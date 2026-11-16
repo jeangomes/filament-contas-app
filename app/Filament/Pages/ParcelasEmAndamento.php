@@ -11,6 +11,7 @@ use App\Domain\Finance\ValueObjects\CompromissoMensal;
 use App\Domain\Finance\ValueObjects\Money;
 use App\Domain\Finance\ValueObjects\Parcelamento;
 use App\Domain\Finance\ValueObjects\ReferenceMonth;
+use App\Filament\Concerns\FormataValores;
 use BackedEnum;
 use DateTimeImmutable;
 use Filament\Infolists\Components\RepeatableEntry;
@@ -44,6 +45,7 @@ use UnitEnum;
  */
 class ParcelasEmAndamento extends Page implements HasTable
 {
+    use FormataValores;
     use InteractsWithTable;
 
     protected static string|null|BackedEnum $navigationIcon = 'heroicon-o-rectangle-stack';
@@ -315,22 +317,5 @@ class ParcelasEmAndamento extends Page implements HasTable
         $valor = $this->tableFilters['pagador']['value'] ?? null;
 
         return ($valor === null || $valor === '') ? null : (string) $valor;
-    }
-
-    /**
-     * Formata a partir da representação decimal exata do `Money` — os
-     * centavos nunca passam por float no caminho até a tela.
-     */
-    private function formatMoney(Money $valor): string
-    {
-        [$inteiro, $centavos] = explode('.', ltrim($valor->paraDecimal(), '-'));
-        $sinal = $valor->ehNegativo() ? '-' : '';
-
-        return $sinal . 'R$ ' . number_format((int) $inteiro, 0, ',', '.') . ',' . $centavos;
-    }
-
-    private function formatCompetencia(ReferenceMonth $mes): string
-    {
-        return sprintf('%02d/%04d', $mes->numeroDoMes(), $mes->ano());
     }
 }

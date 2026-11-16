@@ -7,6 +7,7 @@ namespace App\Filament\Pages;
 use App\Domain\Finance\Enums\Participant;
 use App\Domain\Finance\Exceptions\CompetenciaInvalida;
 use App\Domain\Finance\ValueObjects\ReferenceMonth;
+use App\Filament\Concerns\FormataValores;
 use App\Filament\Pages\Widgets\LancamentosDaFatura;
 use BackedEnum;
 use DateTimeImmutable;
@@ -33,6 +34,8 @@ use UnitEnum;
  */
 class BillsSideBySideOverview extends Page
 {
+    use FormataValores;
+
     protected static string|null|BackedEnum $navigationIcon = 'heroicon-o-credit-card';
 
     protected static ?string $title = 'Faturas Mensais';
@@ -58,7 +61,7 @@ class BillsSideBySideOverview extends Page
 
     public function getSubheading(): string|Htmlable|null
     {
-        return 'Vencimento em ' . $this->formatMes($this->competencia());
+        return 'Vencimento em ' . $this->formatCompetencia($this->competencia());
     }
 
     public function content(Schema $schema): Schema
@@ -135,13 +138,8 @@ class BillsSideBySideOverview extends Page
         }
 
         $atual = $this->competencia();
-        $opcoes[$atual->chave()] ??= $this->formatMes($atual);
+        $opcoes[$atual->chave()] ??= $this->formatCompetencia($atual);
 
         return $opcoes;
-    }
-
-    private function formatMes(ReferenceMonth $mes): string
-    {
-        return sprintf('%02d/%04d', $mes->numeroDoMes(), $mes->ano());
     }
 }
