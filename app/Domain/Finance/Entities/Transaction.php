@@ -6,6 +6,7 @@ namespace App\Domain\Finance\Entities;
 
 use App\Domain\Finance\Enums\ExpenseScope;
 use App\Domain\Finance\Enums\Participant;
+use App\Domain\Finance\Enums\Rubrica;
 use App\Domain\Finance\Enums\TransactionType;
 use App\Domain\Finance\ValueObjects\Money;
 use App\Domain\Finance\ValueObjects\Parcela;
@@ -137,5 +138,23 @@ readonly class Transaction
     {
         return $this->ehDespesaIndividual()
             && $this->responsavelEfetivo() !== $this->whoPaid;
+    }
+
+    /**
+     * O caminho deste lançamento no fechamento. Não é regra nova: só dá nome
+     * à combinação dos predicados acima, na mesma ordem em que as
+     * calculadoras os aplicam.
+     *
+     * A ordem importa: um pagamento de fatura marcado como comum continua
+     * fora do rateio.
+     */
+    public function rubrica(): Rubrica
+    {
+        return match (true) {
+            ! $this->contaParaBalanco() => Rubrica::ForaDoRateio,
+            $this->ehDespesaComum() => $this->deFatura ? Rubrica::ComumDeCartao : Rubrica::ComumDaCasa,
+            $this->isCrossDebt() => Rubrica::DividaCruzada,
+            default => Rubrica::IndividualPropria,
+        };
     }
 }

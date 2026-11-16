@@ -78,12 +78,27 @@ dela. Histórico importado antes disso se conserta com
   `CalculadoraDeCustoDeVida` e `ApuradorDeFechamentoMensal`, que compõe os
   dois, mais `ApuradorDeParcelamentos` (séries parceladas, à parte do
   fechamento). É aqui que a regra de negócio deve ser escrita e testada.
+  `Transaction::rubrica()` (enum `Rubrica`) dá nome ao caminho de cada
+  lançamento no fechamento — comum de cartão, casa, individual, dívida cruzada
+  ou fora do rateio. Não é regra nova: combina os predicados da entidade. As
+  calculadoras **não** a usam; `TransactionRubricaTest` é o que impede as duas
+  leituras de divergirem.
 - `app/Domain/**/Repositories/` e `app/Domain/FonteDeLancamentos.php` — portas
   (interfaces) que o domínio consome.
-- `app/Infra/` — adapters: `Csv/` (importação) e `Eloquent/` (repositório +
-  mapper). Bindings em `AppServiceProvider::register()`.
-- `app/Services/FechamentoMensalService.php` — única orquestração: apura pelo
-  domínio e persiste. Não contém regra.
+- `app/Infra/` — adapters: `Csv/` (importação), `Eloquent/` (repositório +
+  mapper) e `Excel/` (exportação do relatório, com openspout). Bindings em
+  `AppServiceProvider::register()`.
+  `RepositorioDeLancamentosEloquent::consultaDaCompetencia()` devolve o Builder
+  dos models da competência; fica fora da porta (o domínio não conhece
+  Builder) e é o único lugar da regra de competência em SQL.
+- `app/Services/FechamentoMensalService.php` — orquestração de escrita: apura
+  pelo domínio e persiste. Não contém regra.
+- `app/Services/RelatorioDaCompetenciaService.php` — o par de leitura: monta o
+  `Relatorio\RelatorioDaCompetencia` (lançamentos + fechamento apurado ao vivo
+  + fechamento salvo, para comparar). Não persiste nem contém regra. No read
+  model, os **resultados vêm do `FechamentoMensal`** e as somas das linhas
+  servem a subtotais e às `conferencias()` — dois caminhos independentes, senão
+  a conferência é tautologia.
 - `app/Observers/TransactionObserver.php` — mantém os totais agregados da
   fatura (`common_amount`/`individual_amount`), que são cache de exibição.
   **Recalcula só no `updated`**: importar e apagar não disparam recálculo, para
@@ -111,6 +126,20 @@ dela. Histórico importado antes disso se conserta com
   (`$this->x`), que a IDE não enxerga. Use método privado comum e, se a
   consulta for cara, cache explícito em propriedade privada (o Livewire não
   serializa privadas, então vale por request) — ver `LancamentosDaFatura`.
+  `RelatorioDaCompetencia` ("Relatório Mensal") é a memória de cálculo de uma
+  competência (`#[Url]`, `Y-m`): resumo, rateio, dívidas cruzadas, saldo e
+  acerto, custo de vida, origem, as conferências e a tabela de todos os
+  lançamentos com a rubrica. Calculada ao vivo — funciona para mês não
+  fechado — e avisa quando o fechamento salvo está desatualizado, com ação de
+  recalcular. Os filtros da tabela valem **só para a tabela** (ao contrário
+  de Parcelas). "Exportar Excel" grava o mesmo read model em `.xlsx`, sempre o
+  mês inteiro. O cache do relatório é guardado junto com o mês: uma action
+  troca o mês depois de algo já tê-lo lido na mesma request.
+  Tabela com `->records()` (dados próprios) **não tem summarizer, busca,
+  ordenação nem paginação automáticos**: filtre em PHP e ponha o total na
+  descrição da tabela.
+  Formatação de `Money`/competência nas páginas: trait
+  `app/Filament/Concerns/FormataValores.php`.
   `BillsSideBySideOverview` ("Faturas Mensais") guarda só o mês (`#[Url]`,
   `Y-m`) e monta um `LancamentosDaFatura` (`TableWidget` em
   `app/Filament/Pages/Widgets/`, fora de `Filament/Widgets` para não cair no
@@ -159,13 +188,15 @@ que distribui o resto e garante que a soma bata com o total.
   cobre autorização.
 
 # Estado do refactor
-Dois ciclos concluídos, documentados task a task com as decisões tomadas:
+Dois ciclos e duas features concluídos, documentados task a task com as decisões tomadas:
 - `task/00-contexto.md` a `task/11-*.md` — refactor 1: rateio e acerto saíram
   do SQL para o domínio.
 - `task/refactor-02/` — refactor 2: custo de vida, persistência normalizada do
   histórico e consolidação das telas.
 - `task/features/parcelas.md` — feature de parcelas: extração na importação,
   backfill e a tela de acompanhamento.
+- `tasks/report/` — relatório da competência: rubrica no domínio, serviço de
+  leitura, a página "Relatório Mensal" e a exportação para Excel.
 
 Pendências conhecidas:
 - O rename de colunas de `credit_card_bills` (`title_description_owner` →

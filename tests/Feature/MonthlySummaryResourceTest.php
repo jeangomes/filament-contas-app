@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Domain\Finance\Enums\Participant;
 use App\Domain\Finance\ValueObjects\ReferenceMonth;
+use App\Filament\Pages\RelatorioDaCompetencia;
 use App\Filament\Resources\MonthlySummaries\MonthlySummaryResource;
 use App\Filament\Resources\MonthlySummaries\Pages\ListMonthlySummaries;
 use App\Filament\Resources\MonthlySummaries\Pages\ViewMonthlySummary;
@@ -127,6 +128,21 @@ final class MonthlySummaryResourceTest extends TestCase
             ->assertSee('Por participante')
             ->assertSee('Despesas da casa')
             ->assertSee(number_format((float) $custoDeJ, 2, ',', '.'));
+    }
+
+    #[Test]
+    public function a_tabela_e_o_detalhe_levam_ao_relatorio_da_mesma_competencia(): void
+    {
+        $resumo = $this->fecharUmMesComDados();
+        $url = RelatorioDaCompetencia::getUrl(['mes' => '2026-07']);
+
+        $this->assertStringContainsString('mes=2026-07', $url);
+
+        Livewire::test(ListMonthlySummaries::class)
+            ->assertTableActionHasUrl('relatorio', $url, $resumo);
+
+        Livewire::test(ViewMonthlySummary::class, ['record' => $resumo->getKey()])
+            ->assertActionHasUrl('relatorio', $url);
     }
 
     #[Test]

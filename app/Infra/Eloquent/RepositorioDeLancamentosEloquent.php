@@ -11,6 +11,7 @@ use App\Models\Transaction as TransactionEloquent;
 use DateMalformedStringException;
 use DateTimeImmutable;
 use Illuminate\Contracts\Database\Query\Builder;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 
 final readonly class RepositorioDeLancamentosEloquent implements RepositorioDeLancamentos
 {
@@ -24,8 +25,28 @@ final readonly class RepositorioDeLancamentosEloquent implements RepositorioDeLa
      */
     public function paraCompetencia(ReferenceMonth $mes): array
     {
-        return TransactionEloquent::query()
+        return $this->consultaDaCompetencia($mes)
             ->with('creditCardBill')
+            ->get()
+            ->map(fn (TransactionEloquent $model): Transaction => $this->mapper->paraDominio($model))
+            ->all();
+    }
+
+    /**
+     * Os models da competência, para quem precisa de dados que o domínio não
+     * carrega (data original da compra, fatura, categoria) — a regra "item de
+     * fatura pelo vencimento, avulso pela própria data" fica só aqui.
+     *
+     * Fora da porta de propósito: o domínio não conhece Builder. Não filtra
+     * por tipo (quem tira o pagamento de fatura do rateio é o domínio) nem
+     * faz eager load — quem usa carrega `creditCardBill`, exigido pelo mapper
+     * e pelo `preventLazyLoading()`.
+     *
+     * @return EloquentBuilder<TransactionEloquent>
+     */
+    public function consultaDaCompetencia(ReferenceMonth $mes): EloquentBuilder
+    {
+        return TransactionEloquent::query()
             ->where(function (Builder $query) use ($mes) {
                 $query
                     ->where(function (Builder $avulso) use ($mes) {
@@ -37,10 +58,7 @@ final readonly class RepositorioDeLancamentosEloquent implements RepositorioDeLa
                         $fatura->whereYear('due_date', $mes->ano())
                             ->whereMonth('due_date', $mes->numeroDoMes());
                     });
-            })
-            ->get()
-            ->map(fn (TransactionEloquent $model): Transaction => $this->mapper->paraDominio($model))
-            ->all();
+            });
     }
 
     /**

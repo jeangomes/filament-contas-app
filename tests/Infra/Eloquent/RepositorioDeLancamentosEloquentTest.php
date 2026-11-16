@@ -56,6 +56,47 @@ final class RepositorioDeLancamentosEloquentTest extends TestCase
     }
 
     #[Test]
+    public function a_consulta_da_competencia_devolve_os_models_pela_mesma_regra(): void
+    {
+        $fatura = $this->fatura('2026-07-10');
+
+        $itemDeFatura = $this->lancamento(['transaction_date' => '2026-06-20'], $fatura);
+        $avulsoDoMes = $this->lancamento(['transaction_date' => '2026-07-05']);
+        $this->lancamento(['transaction_date' => '2026-06-05']); // avulso do mês anterior
+
+        $ids = $this->repositorio
+            ->consultaDaCompetencia(ReferenceMonth::fromString('2026-07'))
+            ->orderBy('id')
+            ->pluck('id')
+            ->all();
+
+        $this->assertSame([$itemDeFatura->id, $avulsoDoMes->id], $ids);
+    }
+
+    #[Test]
+    public function a_consulta_da_competencia_nao_filtra_o_pagamento_de_fatura(): void
+    {
+        $fatura = $this->fatura('2026-07-10');
+
+        $pagamento = $this->lancamento([
+            'transaction_date' => '2026-06-10',
+            'description' => 'Pagamento recebido',
+            'amount' => '-500.00',
+            'type' => 'pgto_de_fatura',
+        ], $fatura);
+
+        $encontrados = $this->repositorio
+            ->consultaDaCompetencia(ReferenceMonth::fromString('2026-07'))
+            ->with('creditCardBill')
+            ->get();
+
+        // Quem tira o pagamento do rateio é o domínio; o relatório precisa
+        // enxergá-lo para mostrar o que ficou de fora.
+        $this->assertCount(1, $encontrados);
+        $this->assertTrue($encontrados[0]->is($pagamento));
+    }
+
+    #[Test]
     public function converte_o_valor_do_banco_para_centavos_sem_perder_precisao(): void
     {
         $this->lancamento(['transaction_date' => '2026-03-15', 'amount' => '2825.51']);

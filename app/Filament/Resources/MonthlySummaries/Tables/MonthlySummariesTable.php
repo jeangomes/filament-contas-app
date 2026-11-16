@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Filament\Resources\MonthlySummaries\Tables;
 
 use App\Domain\Finance\Enums\Participant;
+use App\Filament\Pages\RelatorioDaCompetencia;
 use App\Models\MonthlySummary;
+use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
@@ -56,6 +58,15 @@ final class MonthlySummariesTable
             ])
             ->recordActions([
                 ViewAction::make()->hiddenLabel(),//->label(null),
+                Action::make('relatorio')
+                    ->label('Relatório')
+                    ->hiddenLabel()
+                    ->tooltip('Relatório detalhado: de onde sai cada número')
+                    ->icon('heroicon-o-document-magnifying-glass')
+                    ->color('gray')
+                    ->url(fn (MonthlySummary $registro): string => RelatorioDaCompetencia::getUrl([
+                        'mes' => $registro->competencia->format('Y-m'),
+                    ])),
             ])
             ->emptyStateHeading('Nenhum fechamento calculado')
             ->emptyStateDescription('Use "Calcular mês" para apurar a primeira competência.')
