@@ -39,8 +39,6 @@ class TransactionsTable
             ])
             ->paginated([45])
             ->defaultSort('id', 'desc')
-//            ->defaultSort(fn($query) => $query->orderBy('credit_card_bill_id', 'desc')
-//                ->orderBy('transaction_date', 'asc')->orderBy('id', 'asc'))
             ->filtersFormColumns(3)
             ->filters([
                 Filter::make('description')
