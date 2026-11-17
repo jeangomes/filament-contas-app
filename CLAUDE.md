@@ -135,6 +135,11 @@ dela. Histórico importado antes disso se conserta com
   de Parcelas). "Exportar Excel" grava o mesmo read model em `.xlsx`, sempre o
   mês inteiro. O cache do relatório é guardado junto com o mês: uma action
   troca o mês depois de algo já tê-lo lido na mesma request.
+  `VisaoAnual` ("Visão Anual") lê **só o fechamento persistido** (nada ao
+  vivo): por ano (`#[Url]`, navegável), os 12 meses de competência com
+  fatura total/comum/individual e custo de vida de cada participante, mais
+  a linha "Total do ano" (só meses fechados). Mês sem fechamento aparece
+  marcado "Sem fechamento", não some.
   Tabela com `->records()` (dados próprios) **não tem summarizer, busca,
   ordenação nem paginação automáticos**: filtre em PHP e ponha o total na
   descrição da tabela.
