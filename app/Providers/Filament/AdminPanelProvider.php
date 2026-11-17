@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Auth\EditarPerfil;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -27,6 +28,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('/')
             ->login()
+            ->profile(EditarPerfil::class, isSimple: false)
             ->brandName('Contas Casinha V3')
             ->sidebarWidth('15rem')
             ->sidebarCollapsibleOnDesktop()
