@@ -96,6 +96,29 @@ final class MonthlySummaryResourceTest extends TestCase
     }
 
     #[Test]
+    public function a_tabela_tem_colunas_ocultas_para_as_despesas_da_casa(): void
+    {
+        Transaction::query()->create(array_merge($this->atributos(), [
+            'description' => 'Condomínio',
+            'amount' => '521.09',
+        ]));
+        $resumo = $this->fecharUmMesComDados();
+
+        Livewire::test(ListMonthlySummaries::class)
+            ->assertTableColumnExists('casa_aluguel')
+            ->assertTableColumnExists('casa_condominio')
+            ->assertTableColumnExists('casa_light')
+            ->assertTableColumnExists('casa_naturgy')
+            ->assertTableColumnExists('casa_claro')
+            ->assertDontSee('521,09')
+            ->toggleAllTableColumns()
+            ->assertTableColumnStateSet('casa_aluguel', '300.00', $resumo)
+            ->assertTableColumnStateSet('casa_condominio', '521.09', $resumo)
+            ->assertTableColumnStateSet('casa_light', null, $resumo)
+            ->assertSee('521,09');
+    }
+
+    #[Test]
     public function a_tabela_nao_faz_consulta_por_linha(): void
     {
         // Com eager load, passar de 1 para 6 competências não pode aumentar o

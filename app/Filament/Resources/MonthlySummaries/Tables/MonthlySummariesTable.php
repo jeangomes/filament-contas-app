@@ -12,9 +12,17 @@ use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
 
 final class MonthlySummariesTable
 {
+    /**
+     * Despesas da casa que ganham coluna própria. Não é regra de cálculo (o
+     * domínio não tem lista de descrições): é só o que a tabela escolhe
+     * destacar do detalhe em `monthly_home_expenses`.
+     */
+    private const array DESPESAS_DA_CASA_EM_COLUNA = ['Aluguel', 'Condomínio', 'LIGHT', 'Naturgy', 'Claro'];
+
     public static function configure(Table $table): Table
     {
         return $table
@@ -29,6 +37,8 @@ final class MonthlySummariesTable
                     ->description(fn (MonthlySummary $registro): string => 'ref ' . $registro->reference_month->format('m/Y')),
 
                 TextColumn::make('total_home_expenses')->label('Casa')->money('BRL')->sortable(),
+                ...array_map(self::colunaDaDespesaDaCasa(...), self::DESPESAS_DA_CASA_EM_COLUNA),
+
                 TextColumn::make('total_common_expenses')->label('Total comum')->money('BRL')->sortable(),
 
                 self::colunaDoParticipante(Participant::D, 'living_cost', 'Custo vida D')->color('success'),
@@ -82,5 +92,18 @@ final class MonthlySummariesTable
             ->money('BRL')
             ->state(fn (MonthlySummary $registro): ?string => $registro
                 ->participantSummary($participante)?->{$campo});
+    }
+
+    private static function colunaDaDespesaDaCasa(string $descricao): TextColumn
+    {
+        // Também lê da relação já carregada. Mês sem essa despesa fica em
+        // branco, não em R$ 0,00: a linha não existe.
+        return TextColumn::make('casa_' . Str::slug($descricao, '_'))
+            ->label($descricao)
+            ->money('BRL')
+            ->placeholder('—')
+            ->state(fn (MonthlySummary $registro): ?string => $registro->homeExpenses
+                ->firstWhere('label', $descricao)?->amount)
+            ->toggleable(isToggledHiddenByDefault: true);
     }
 }
